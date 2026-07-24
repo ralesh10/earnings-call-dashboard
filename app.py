@@ -16,9 +16,7 @@ def load_model():
 df = load_data()
 model = load_model()
 
-feature_cols = ['pres_pos', 'pres_neg', 'pres_neu', 'qa_pos', 'qa_neg', 'qa_neu',
-                 'sentiment_mismatch_pos', 'sentiment_mismatch_neg', 'evasion_index']
-feature_cols = [c for c in feature_cols if c in df.columns]
+feature_cols = joblib.load('feature_cols.pkl')
 
 st.title("📈 AI Earnings Call Analyzer")
 st.caption("Predicting Stock Outperformance Using NLP")
