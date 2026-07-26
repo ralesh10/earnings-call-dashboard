@@ -1,0 +1,4 @@
+split,metric,value,n,notes
+final_holdout,accuracy,0.5567,300,Original notebook reported accuracy
+final_holdout,auc,0.6272,300,Original notebook reported ROC AUC
+final_holdout,baseline_accuracy,0.5133,300,Majority-class baseline

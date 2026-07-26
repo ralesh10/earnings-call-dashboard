@@ -1,5 +1,9 @@
-streamlit
-pandas
-scikit-learn
-matplotlib
-joblib
+streamlit>=1.32
+pandas>=2.0
+numpy>=1.24
+# The experimental XGBoost pipeline was serialized with scikit-learn 1.6.1.
+# Keep this pinned so its SimpleImputer/StandardScaler state is portable.
+scikit-learn==1.6.1
+joblib>=1.3
+plotly>=5.18
+xgboost>=2.0
