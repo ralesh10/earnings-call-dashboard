@@ -12,6 +12,7 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PRICE_WINDOWS_PATH = ROOT / "artifacts" / "market_data" / "price_windows.json"
 sys.path.insert(0, str(ROOT))
 
 from app import (  # noqa: E402
@@ -59,6 +60,17 @@ def _json_value(value: Any) -> Any:
         except ValueError:
             pass
     return value
+
+
+def _load_price_windows() -> dict[str, dict[str, Any]]:
+    if not PRICE_WINDOWS_PATH.exists():
+        return {}
+    try:
+        payload = json.loads(PRICE_WINDOWS_PATH.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+    windows = payload.get("windows", payload) if isinstance(payload, dict) else {}
+    return windows if isinstance(windows, dict) else {}
 
 
 def _model_key(bundle: Any) -> str:
@@ -127,7 +139,8 @@ def _prediction_for(bundle: Any, row: pd.Series) -> dict[str, Any]:
     frame = row.to_frame().T
     probability, status, source = _predict(bundle, frame)
     center = _base_rate(bundle) or float(bundle.schema.get("prediction_threshold", 0.5))
-    signal, tone, explanation = _signal(probability, center)
+    threshold = float(bundle.schema.get("prediction_threshold", 0.5))
+    signal, tone, explanation = _signal(probability, center, threshold)
     target = str(bundle.schema.get("target_column", "abnormal_return_5d"))
     actual = _number(row.get(target))
     difference = None if probability is None else probability - center
@@ -151,6 +164,9 @@ def _prediction_for(bundle: Any, row: pd.Series) -> dict[str, Any]:
         }.get(status, "Validation provenance was not provided by the artifact."),
         "source": source,
         "signal": signal,
+        "directionLabel": "Positive prediction" if signal == "Positive" else "Negative prediction" if signal == "Negative" else "Unavailable",
+        "predictionThreshold": threshold,
+        "baseRateRelation": "Above base rate" if difference is not None and difference >= 0 else "Below base rate" if difference is not None else "Unavailable",
         "tone": tone,
         "explanation": explanation,
         "confidence": _conviction(probability, center).upper(),
@@ -183,6 +199,11 @@ def _call_record(bundle: Any, rows_by_key: dict[tuple[str, str], dict[str, Any]]
         "qaLen": f"{int(_number(row.get('qa_n_sentences')) or 0):,} Q&A sentences" if _number(row.get("qa_n_sentences")) is not None else "Unavailable",
         "priceSeries": _json_value(row.get("price_series")),
         "benchmarkSeries": _json_value(row.get("benchmark_series")),
+        "priceDates": None,
+        "chartLabels": None,
+        "eventIndex": None,
+        "evaluationStartIndex": None,
+        "evaluationEndIndex": None,
         "models": {},
     })
     prediction = _prediction_for(bundle, row)
@@ -228,6 +249,14 @@ def main() -> None:
         for _, row in bundle.feature_table.iterrows():
             _call_record(bundle, rows_by_key, row)
     calls = sorted(rows_by_key.values(), key=lambda item: item.get("datetime") or "", reverse=True)
+    price_windows = _load_price_windows()
+    for call in calls:
+        window = price_windows.get(call["id"])
+        if not isinstance(window, dict):
+            continue
+        for field in ("priceSeries", "benchmarkSeries", "priceDates", "chartLabels", "eventIndex", "evaluationStartIndex", "evaluationEndIndex", "provider", "benchmarkSymbol"):
+            if field in window:
+                call[field] = _json_value(window[field])
 
     metrics = _load_comparison_metrics()
     model_config = [

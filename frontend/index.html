@@ -233,6 +233,9 @@ Failed to create stream fd: Operation not permitted
   .badge.neutral { background: var(--neutral-soft); color: var(--neutral); border: 1px solid rgba(56,189,248,0.3); }
   .badge.gold { background: var(--gold-soft); color: var(--gold); border: 1px solid rgba(245,176,65,0.3); }
   .badge.muted { background: var(--surface-raised); color: var(--muted); border: 1px solid var(--border); }
+  .badge.confidence-low { background: rgba(245,176,65,0.12); color: var(--gold); border: 1px solid rgba(245,176,65,0.35); }
+  .badge.confidence-medium { background: rgba(56,189,248,0.12); color: var(--neutral); border: 1px solid rgba(56,189,248,0.35); }
+  .badge.confidence-high { background: rgba(167,139,250,0.14); color: #c4b5fd; border: 1px solid rgba(167,139,250,0.4); }
 
   /* Feature Bars */
   .f-bar-wrap { display: flex; align-items: center; gap: 10px; width: 100%; }
@@ -281,7 +284,13 @@ Failed to create stream fd: Operation not permitted
   /* Market Event Window Chart */
   .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
   .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .chart-canvas-wrap { position: relative; height: 220px; width: 100%; background: var(--bg); border: 1px solid var(--border-soft); border-radius: 6px; padding: 10px; }
+  .chart-canvas-wrap { position: relative; height: 260px; width: 100%; background: var(--bg); border: 1px solid var(--border-soft); border-radius: 6px; padding: 10px; }
+  .chart-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0 0 8px; color: var(--muted); font: 11px var(--font-mono); }
+  .chart-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .chart-swatch { width: 18px; height: 3px; border-radius: 2px; display: inline-block; }
+  .chart-swatch.stock { background: var(--up); }
+  .chart-swatch.benchmark { background: #38bdf8; }
+  .chart-summary { margin-left: auto; color: var(--muted-dim); }
   .chart-note { font-size: 11px; font-family: var(--font-mono); color: var(--muted-dim); margin-top: 10px; background: var(--surface-raised); padding: 8px 12px; border-radius: 4px; border-left: 3px solid var(--gold); }
 
   /* Reliability & Evaluation Suite */
@@ -471,27 +480,27 @@ Failed to create stream fd: Operation not permitted
         <div class="filter-group">
           <span class="filter-label">Signal Direction:</span>
           <div class="pill-group" id="filterDir">
-            <button class="pill active" data-filter-type="dir" data-filter-value="ALL">All Signals</button>
-            <button class="pill" data-filter-type="dir" data-filter-value="UP">▲ Up Only</button>
-            <button class="pill" data-filter-type="dir" data-filter-value="DOWN">▼ Down Only</button>
+            <button type="button" class="pill active" data-filter-type="dir" data-filter-value="ALL">All Signals</button>
+            <button type="button" class="pill" data-filter-type="dir" data-filter-value="UP">▲ Positive predictions</button>
+            <button type="button" class="pill" data-filter-type="dir" data-filter-value="DOWN">▼ Negative predictions</button>
           </div>
         </div>
         <div class="filter-group">
           <span class="filter-label">Confidence Band:</span>
           <div class="pill-group" id="filterConf">
-            <button class="pill active" data-filter-type="conf" data-filter-value="ALL">All</button>
-            <button class="pill" data-filter-type="conf" data-filter-value="HIGH">High</button>
-            <button class="pill" data-filter-type="conf" data-filter-value="MEDIUM">Medium</button>
-            <button class="pill" data-filter-type="conf" data-filter-value="LOW">Low</button>
+            <button type="button" class="pill active" data-filter-type="conf" data-filter-value="ALL">All</button>
+            <button type="button" class="pill" data-filter-type="conf" data-filter-value="HIGH">High</button>
+            <button type="button" class="pill" data-filter-type="conf" data-filter-value="MEDIUM">Medium</button>
+            <button type="button" class="pill" data-filter-type="conf" data-filter-value="LOW">Low</button>
           </div>
         </div>
         <div class="filter-group">
           <span class="filter-label">Coverage Status:</span>
           <div class="pill-group" id="filterStatus">
-            <button class="pill active" data-filter-type="status" data-filter-value="ALL">All</button>
-            <button class="pill" data-filter-type="status" data-filter-value="VALIDATED">Validated</button>
-            <button class="pill" data-filter-type="status" data-filter-value="EXPLORATORY">Exploratory</button>
-            <button class="pill" data-filter-type="status" data-filter-value="UNAVAILABLE">Unavailable</button>
+            <button type="button" class="pill active" data-filter-type="status" data-filter-value="ALL">All</button>
+            <button type="button" class="pill" data-filter-type="status" data-filter-value="VALIDATED">Validated</button>
+            <button type="button" class="pill" data-filter-type="status" data-filter-value="EXPLORATORY">Exploratory</button>
+            <button type="button" class="pill" data-filter-type="status" data-filter-value="UNAVAILABLE">Unavailable</button>
           </div>
         </div>
       </div>
@@ -514,7 +523,7 @@ Failed to create stream fd: Operation not permitted
             <th>Earnings Quarter</th>
             <th>Dataset Status</th>
             <th>Active Model Signal</th>
-            <th>Confidence <span class="infoicon">i<span class="tip">Low: within 5 points of the base rate. Medium: 5–15 points away. High: at least 15 points away. Direction labels use the same ±5-point neutral zone.</span></span></th>
+            <th>Confidence <span class="infoicon">i<span class="tip">The model always makes a binary positive or negative prediction when a probability exists. Confidence is measured against the base rate: low is within 5 points, medium is 5–15 points, and high is at least 15 points away.</span></span></th>
             <th>Actual 5D Return</th>
             <th>Action</th>
           </tr>
@@ -561,7 +570,7 @@ Failed to create stream fd: Operation not permitted
             <div class="gauge-fill" id="gaugeFill"></div>
           </div>
           <div class="gauge-val" id="gaugeProbText">68%</div>
-          <div class="gauge-sub" id="gaugeDirText">▲ Bullish / Positive Return</div>
+          <div class="gauge-sub" id="gaugeDirText">Above or below base rate</div>
           <div id="gaugeContext" style="font-size:11px;color:var(--muted-dim);font-family:var(--font-mono);margin-top:8px;">Base rate: — · Difference: —</div>
           <div style="margin-top: 14px;">
             <span class="badge" id="gaugeConfBadge">HIGH CONFIDENCE</span>
@@ -611,14 +620,17 @@ Failed to create stream fd: Operation not permitted
             <strong style="font-size: 14px; font-family: var(--font-display);">5-Day Market Event Window</strong>
               <span style="font-size: 12px; color: var(--muted); margin-left: 8px; font-family: var(--font-mono);">Normalized Stock Price vs Benchmark around Earnings (T = 0)</span>
             </div>
-            <span class="badge muted">HISTORICAL SIMULATION</span>
+            <span class="badge muted" id="eventChartBadge">PRICE DATA UNAVAILABLE</span>
           </div>
+
+          <div class="chart-legend" id="eventChartLegend" style="display:none;"></div>
+          <div class="chart-summary" id="eventChartSummary" style="font:11px var(--font-mono);margin:-2px 0 8px;color:var(--muted-dim);"></div>
 
           <div class="chart-canvas-wrap">
-            <canvas id="eventChartCanvas" width="700" height="200" style="width:100%; height:100%;"></canvas>
+            <canvas id="eventChartCanvas" width="1200" height="260" style="width:100%; height:100%;"></canvas>
           </div>
 
-          <div class="chart-note">
+          <div class="chart-note" id="eventChartNote">
             <strong>Evidence availability:</strong> Price and benchmark series appear only when they are included in the selected artifact. No generated market path is shown.
           </div>
         </div>
@@ -681,6 +693,6 @@ Failed to create stream fd: Operation not permitted
 
 </main>
 
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

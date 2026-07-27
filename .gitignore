@@ -3,4 +3,12 @@ __pycache__/
 *.pyc
 *$py.class
 
+# Local market-data cache; the compact price_windows.json sidecar can be
+# exported and committed for the static deployment, but raw provider bars
+# should stay local.
+artifacts/market_data/alpaca_daily_bars.json
+
 .venv/
+.env
+.env.*
+!.env.example

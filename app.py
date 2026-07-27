@@ -384,14 +384,13 @@ def _base_rate(bundle: ArtifactBundle) -> float | None:
     return None
 
 
-def _signal(probability: float | None, center: float) -> tuple[str, str, str]:
+def _signal(probability: float | None, center: float, threshold: float | None = None) -> tuple[str, str, str]:
     if probability is None:
         return "Unavailable", "neutral", "This call does not have a usable model score."
-    if probability >= min(.99, center + .05):
-        return "Positive", "positive", "The model estimates a meaningfully higher chance of a positive five-session abnormal return than the base rate."
-    if probability <= max(.01, center - .05):
-        return "Negative", "negative", "The model estimates a meaningfully lower chance of a positive five-session abnormal return than the base rate."
-    return "No clear signal", "neutral", "The model output is close to the typical positive-return rate, so the directional signal is limited."
+    decision_threshold = center if threshold is None else threshold
+    if probability >= decision_threshold:
+        return "Positive", "positive", "The model probability is above its binary decision threshold; confidence reflects its distance from the typical positive-return rate."
+    return "Negative", "negative", "The model probability is below its binary decision threshold; confidence reflects its distance from the typical positive-return rate."
 
 
 def _conviction(probability: float | None, center: float) -> str:
@@ -417,7 +416,8 @@ def _collect_model_results(bundles: tuple[ArtifactBundle, ...], symbol: str, cal
             continue
         probability, status, source = _predict(bundle, matched.iloc[[0]])
         center = _base_rate(bundle) or float(bundle.schema.get("prediction_threshold", .5))
-        label, tone, _ = _signal(probability, center)
+        threshold = float(bundle.schema.get("prediction_threshold", .5))
+        label, tone, _ = _signal(probability, center, threshold)
         results.append({
             "model": bundle.display_name,
             "bundle": bundle,
@@ -725,6 +725,7 @@ def _prepare_table(bundle: ArtifactBundle) -> pd.DataFrame:
     table["call_datetime"] = pd.to_datetime(table["call_datetime"], errors="coerce")
     table = table.sort_values("call_datetime", ascending=False)
     center = _base_rate(bundle) or float(bundle.schema.get("prediction_threshold", .5))
+    threshold = float(bundle.schema.get("prediction_threshold", .5))
     probabilities: list[float | None] = []
     statuses: list[str] = []
     signals: list[str] = []
@@ -732,7 +733,7 @@ def _prepare_table(bundle: ArtifactBundle) -> pd.DataFrame:
     convictions: list[str] = []
     for _, row in table.iterrows():
         probability, status, _ = _predict(bundle, row.to_frame().T)
-        signal, tone, _ = _signal(probability, center)
+        signal, tone, _ = _signal(probability, center, threshold)
         probabilities.append(probability)
         statuses.append(status)
         signals.append(signal)
@@ -864,7 +865,7 @@ def _render_mockup_overview(bundle: ArtifactBundle, table: pd.DataFrame | None =
             f'<div class="card-meta">{_escape(date_text)} · {_escape(_phase_label(spotlight_row))} · {_status_pill(str(spotlight_row["_status"]))}</div></div>'
             f'<span class="badge {"badge-up" if tone == "positive" else "badge-down" if tone == "negative" else "badge-neutral"}">{_escape(signal)} · {_format_percent(_as_float(spotlight_row["_probability"]))}</span></div>'
             f'<p style="color:var(--muted);border-left:2px solid var(--gold);padding-left:.65rem;margin:.8rem 0;">'
-            f'<strong>Model rationale:</strong> { _escape(_signal(_as_float(spotlight_row["_probability"]), center)[2]) }</p>'
+            f'<strong>Model rationale:</strong> { _escape(_signal(_as_float(spotlight_row["_probability"]), center, float(bundle.schema.get("prediction_threshold", .5)))[2]) }</p>'
             f'<div class="feature-container">{feature_html}</div></div>',
             unsafe_allow_html=True,
         )
@@ -1022,7 +1023,7 @@ def _render_mockup_detail(bundles: tuple[ArtifactBundle, ...], bundle: ArtifactB
     probability = _as_float(row["_probability"])
     base_rate = _base_rate(bundle)
     center = base_rate or float(bundle.schema.get("prediction_threshold", .5))
-    signal, tone, explanation = _signal(probability, center)
+    signal, tone, explanation = _signal(probability, center, float(bundle.schema.get("prediction_threshold", .5)))
     status = str(row["_status"])
     timestamp = pd.to_datetime(row["call_datetime"], errors="coerce")
     date_text = timestamp.strftime("%b %d, %Y · %H:%M") if pd.notna(timestamp) else "Date unavailable"
@@ -1129,7 +1130,7 @@ def _render_calls(bundle: ArtifactBundle, bundles: tuple[ArtifactBundle, ...]) -
 
     filter_a, filter_b, filter_c = st.columns([1, 1, 1.1])
     with filter_a:
-        direction_filter = st.selectbox("Direction", ["All directions", "Positive", "Negative", "No clear signal"], key="calls_direction_filter")
+        direction_filter = st.selectbox("Direction", ["All directions", "Positive", "Negative"], key="calls_direction_filter")
     with filter_b:
         confidence_filter = st.selectbox("Confidence", ["All confidence", "Low", "Medium", "High"], key="calls_confidence_filter")
     with filter_c:
@@ -1394,7 +1395,7 @@ def _render_call_detail(bundles: tuple[ArtifactBundle, ...], label_to_bundle: di
     source = _predict(bundle, selected)[2]
     base_rate = _base_rate(bundle)
     center = base_rate or float(bundle.schema.get("prediction_threshold", .5))
-    signal, tone, explanation = _signal(probability, center)
+    signal, tone, explanation = _signal(probability, center, float(bundle.schema.get("prediction_threshold", .5)))
     company_name = selected_row.get("company_name", selected_row.get("symbol", "Unknown"))
     timestamp = pd.to_datetime(selected_row.get("call_datetime"), errors="coerce")
     timestamp_text = timestamp.strftime("%b %d, %Y · %H:%M") if pd.notna(timestamp) else "Date unavailable"
@@ -1488,7 +1489,7 @@ def _render_home(bundle: ArtifactBundle) -> None:
     steps = st.columns(4)
     process = [
         ("01 · Call", "Choose a company and earnings call."),
-        ("02 · Signal", "See Positive, Negative, or No clear signal."),
+        ("02 · Signal", "See the model’s Positive or Negative prediction."),
         ("03 · Why", "Inspect tone, Q&A behavior, and market context."),
         ("04 · Trust", "Check validation status and model reliability."),
     ]

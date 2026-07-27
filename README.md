@@ -57,6 +57,22 @@ The top bar controls the active model. The ticker tape, signal labels, validatio
 
 Prediction provenance is shown per call as **Out-of-sample holdout**, **Walk-forward validated**, **Retrospective inference**, or **Unavailable**. Missing optional price series, transcript evidence, and feature groups are called out instead of being replaced with fabricated content.
 
+## Optional historical price enrichment
+
+The frontend can display a normalized T-5 through T+5 trading-session chart when `artifacts/market_data/price_windows.json` exists. Generate it offline with Alpaca’s historical bars API:
+
+```bash
+# .env at the repository root; do not commit this file:
+# ALPACA_KEY=your-key
+# ALPACA_SECRET=your-secret
+./.venv/bin/python scripts/enrich_price_windows.py
+./.venv/bin/python scripts/export_frontend_data.py
+```
+
+The enrichment script fetches each unique ticker once from Alpaca’s market-data endpoint (`https://data.alpaca.markets/v2`), using your paper keys for authentication. The `https://paper-api.alpaca.markets/v2` URL is the paper trading/account endpoint and is not used for historical bars. It caches raw daily bars in `artifacts/market_data/alpaca_daily_bars.json` and writes call-specific windows to `price_windows.json`. The browser reads the exported JSON; it never calls Alpaca and never receives the API credentials. Calls outside the provider’s historical coverage remain clearly unavailable.
+
+When a probability exists, the interface always shows the model’s binary **Positive prediction** or **Negative prediction**. The base rate is a separate reference point used to explain confidence: low is less than 5 percentage points from the base rate, medium is 5–15 points, and high is at least 15 points. The binary target is the eventual positive/negative five-session outcome; confidence describes the strength of the model’s probability relative to the typical rate, not a third prediction class.
+
 The model lab prioritizes walk-forward AUC, latest holdout AUC, Brier score, sample size, and evaluation period. Accuracy, precision, recall, F1, log loss, and other raw metrics remain available under the technical details expander.
 
 Historical abnormal returns are shown only in the clearly labeled backtest section; they are never passed to the model as inputs.

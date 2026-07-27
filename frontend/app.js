@@ -70,11 +70,24 @@ function statusBadge(status) {
   return `<span class="badge ${className}" title="${escapeHtml(status || 'Unavailable')}">${statusCategoryLabel(status)}</span>`;
 }
 
+function directionLabel(model) {
+  if (!model || model.prob === null || model.prob === undefined) return 'Unavailable';
+  return model.directionLabel || (model.signal === 'Positive' ? 'Positive prediction' : 'Negative prediction');
+}
+
+function confidenceBadge(model) {
+  if (!model || !model.confidence || model.confidence === 'UNAVAILABLE') return '<span class="badge muted">Unavailable</span>';
+  const level = String(model.confidence).toLowerCase();
+  return `<span class="badge confidence-${escapeHtml(level)}" title="${escapeHtml(model.confidenceDescription || 'Confidence is measured against the active model base rate.')}">${escapeHtml(level)} confidence</span>`;
+}
+
 function signalBadge(model) {
   if (!model || model.prob === null || model.prob === undefined) return '<span class="badge muted">Unavailable</span>';
   const className = model.tone === 'positive' ? 'up' : model.tone === 'negative' ? 'down' : 'neutral';
-  const label = model.signal === 'Positive' ? '▲ Positive' : model.signal === 'Negative' ? '▼ Negative' : '• No clear signal';
-  const context = `Model probability ${formatPercent(model.prob)}; typical positive-return rate ${formatPercent(model.baseRate)}; difference ${formatPoints(model.differenceFromBaseRate, true)}. ${model.confidenceDescription || model.explanation}`;
+  const label = model.tone === 'positive' ? '▲ Positive prediction' : '▼ Negative prediction';
+  const baseRelation = model.baseRateRelation || (Number(model.prob) >= Number(model.baseRate) ? 'Above base rate' : 'Below base rate');
+  const threshold = model.predictionThreshold === null || model.predictionThreshold === undefined ? 'Unavailable' : formatPercent(model.predictionThreshold);
+  const context = `Model probability ${formatPercent(model.prob)}; binary decision threshold ${threshold}; ${baseRelation}; typical positive-return rate ${formatPercent(model.baseRate)}; difference ${formatPoints(model.differenceFromBaseRate, true)}. ${model.confidenceDescription || model.explanation}`;
   return `<span class="badge ${className}" title="${escapeHtml(context)}">${label} · ${formatPercent(model.prob)}</span>`;
 }
 
@@ -133,7 +146,7 @@ function onModelChange() {
 function setFilter(type, value, button) {
   state.filters[type] = value;
   state.page = 1;
-  document.querySelectorAll(`[data-filter-type="${type}"]`).forEach((pill) => pill.classList.toggle('active', pill.dataset.filterValue === value));
+  updateFilterUI();
   renderScreener();
 }
 
@@ -170,7 +183,7 @@ function updateSpotlight() {
   $('spotlightCompany').innerText = `${call.sym} — ${call.co}`;
   $('spotlightMeta').innerText = `${call.year} Q${call.q} · ${call.date} · ${call.timing} · ${statusCategoryLabel(model.status)} · ${model.status}`;
   $('spotlightSignal').className = `badge ${model.tone === 'positive' ? 'up' : model.tone === 'negative' ? 'down' : 'neutral'}`;
-  $('spotlightSignal').innerText = `${model.signal} · ${formatPercent(model.prob)}`;
+  $('spotlightSignal').innerText = `${directionLabel(model)} · ${formatPercent(model.prob)}`;
   $('spotlightRationale').innerText = model.explanation;
   $('spotlightFeatures').innerHTML = (model.featureBars || []).slice(0, 3).map((feature) => `
     <div>
@@ -232,7 +245,7 @@ function renderScreener() {
       <td class="text-mono">${escapeHtml(call.year)} Q${escapeHtml(call.q)}<span style="color:var(--muted-dim);font-size:11px;display:block;">${escapeHtml(call.date)} · ${escapeHtml(call.timing)}</span></td>
       <td>${statusBadge(model?.status || 'Unavailable')}</td>
       <td>${signalBadge(model)}</td>
-      <td class="text-mono" style="font-size:11.5px;color:var(--muted);">${escapeHtml(model?.confidence || 'Unavailable')}</td>
+      <td>${confidenceBadge(model)}</td>
       <td class="text-mono font-weight-bold ${actualClass}">${actual}</td>
       <td><button class="btn" style="padding:4px 10px;font-size:11px;" data-call-id="${escapeHtml(call.id)}">View ➔</button></td>
     </tr>`;
@@ -349,9 +362,10 @@ function renderDetailView() {
     gaugeFill.style.borderColor = color;
     probText.innerText = formatPercent(model.prob);
     probText.style.color = color;
-    dirText.innerText = model.signal;
-    $('gaugeContext').innerText = `Base rate: ${formatPercent(model.baseRate)} · Difference: ${formatPoints(model.differenceFromBaseRate, true)}`;
-    confBadge.className = `badge ${model.tone === 'positive' ? 'up' : model.tone === 'negative' ? 'down' : 'neutral'}`;
+    dirText.innerText = directionLabel(model);
+    const threshold = model.predictionThreshold === null || model.predictionThreshold === undefined ? 'Unavailable' : formatPercent(model.predictionThreshold);
+    $('gaugeContext').innerText = `Threshold: ${threshold} · Base rate: ${formatPercent(model.baseRate)} · Difference: ${formatPoints(model.differenceFromBaseRate, true)}`;
+    confBadge.className = `badge confidence-${String(model.confidence || 'unavailable').toLowerCase()}`;
     confBadge.innerText = `${model.confidence} CONFIDENCE`;
     confBadge.title = model.confidenceDescription || 'Confidence compares distance from the active model’s base rate.';
     $('gaugeConfidenceNote').innerText = model.confidenceDescription || 'Confidence compares the model probability with the active model’s typical positive-return rate.';
@@ -366,38 +380,130 @@ function drawEventWindowChart(call) {
   if (!canvas || !wrap) return;
   const stock = Array.isArray(call.priceSeries) ? call.priceSeries.map(Number).filter(Number.isFinite) : [];
   const benchmark = Array.isArray(call.benchmarkSeries) ? call.benchmarkSeries.map(Number).filter(Number.isFinite) : [];
+  const badge = $('eventChartBadge');
+  const legend = $('eventChartLegend');
+  const summary = $('eventChartSummary');
+  const note = $('eventChartNote');
   if (stock.length < 2) {
     canvas.style.display = 'none';
-    wrap.innerHTML = '<div style="height:200px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--font-mono);font-size:12px;text-align:center;">Price and benchmark series are not included in the selected artifact.<br>No generated market path is shown.</div>';
+    if (badge) { badge.className = 'badge muted'; badge.innerText = 'PRICE DATA UNAVAILABLE'; }
+    if (legend) { legend.style.display = 'none'; legend.innerHTML = ''; }
+    if (summary) summary.innerText = '';
+    if (note) note.innerHTML = '<strong>Evidence unavailable:</strong> Historical price and benchmark series are not included for this call. No market path has been generated or inferred.';
+    let empty = wrap.querySelector('.event-chart-empty');
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.className = 'event-chart-empty';
+      empty.style.cssText = 'height:240px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--font-mono);font-size:12px;text-align:center;';
+      wrap.appendChild(empty);
+    }
+    empty.innerHTML = 'Price and benchmark series are not included in the selected artifact.<br>No generated market path is shown.';
     return;
   }
   canvas.style.display = 'block';
+  wrap.querySelector('.event-chart-empty')?.remove();
+  if (badge) { badge.className = 'badge neutral'; badge.innerText = 'HISTORICAL DATA'; }
+  const hasBenchmark = benchmark.length === stock.length;
+  if (legend) {
+    legend.style.display = 'flex';
+    legend.innerHTML = `<span class="chart-legend-item"><i class="chart-swatch stock"></i>Stock</span>${hasBenchmark ? `<span class="chart-legend-item"><i class="chart-swatch benchmark"></i>${escapeHtml(call.benchmarkSymbol || 'Benchmark')}</span>` : ''}<span class="chart-legend-item chart-summary">Indexed close · T−5 = 100</span>`;
+  }
+  const dates = Array.isArray(call.priceDates) ? call.priceDates : [];
+  if (summary) {
+    const firstClose = `$${stock[0].toFixed(2)}`;
+    const lastClose = `$${stock[stock.length - 1].toFixed(2)}`;
+    const benchmarkSummary = hasBenchmark ? ` · ${escapeHtml(call.benchmarkSymbol || 'Benchmark')} close: $${benchmark[0].toFixed(2)} → $${benchmark[benchmark.length - 1].toFixed(2)}` : '';
+    const dateRange = dates.length >= 2 ? ` · ${escapeHtml(dates[0])} → ${escapeHtml(dates[dates.length - 1])}` : '';
+    summary.innerHTML = `Stock close: ${firstClose} → ${lastClose}${benchmarkSummary}${dateRange}`;
+  }
+  if (note) note.innerHTML = '<strong>How to read it:</strong> Each series is indexed to 100 at T−5 so the stock and benchmark can share one scale. The gold marker is the call; the dashed marker is the end of the five-session evaluation window.';
+
   const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.max(480, Math.floor(rect.width || 900));
+  const h = 240;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
   const normalized = (values) => values.map((value) => (value / values[0]) * 100);
   const series = [normalized(stock)];
-  if (benchmark.length === stock.length) series.push(normalized(benchmark));
+  if (hasBenchmark) series.push(normalized(benchmark));
   const all = series.flat();
-  const min = Math.min(...all);
-  const max = Math.max(...all);
-  const x = (index, length) => (index / Math.max(1, length - 1)) * (w - 20) + 10;
-  const y = (value) => h - 12 - ((value - min) / Math.max(0.0001, max - min)) * (h - 24);
-  ctx.strokeStyle = '#141a26';
-  for (let i = 1; i < 4; i += 1) { ctx.beginPath(); ctx.moveTo(0, (h / 4) * i); ctx.lineTo(w, (h / 4) * i); ctx.stroke(); }
+  const rawMin = Math.min(...all);
+  const rawMax = Math.max(...all);
+  const rawRange = Math.max(1, rawMax - rawMin);
+  const min = rawMin - rawRange * 0.12;
+  const max = rawMax + rawRange * 0.12;
+  const left = 48;
+  const right = 18;
+  const top = 18;
+  const bottom = 45;
+  const plotHeight = h - top - bottom;
+  const plotWidth = w - left - right;
+  const x = (index, length) => left + (index / Math.max(1, length - 1)) * plotWidth;
+  const y = (value) => top + ((max - value) / Math.max(0.0001, max - min)) * plotHeight;
+  ctx.font = '10px IBM Plex Mono';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i += 1) {
+    const value = max - ((max - min) / 4) * i;
+    const lineY = y(value);
+    ctx.strokeStyle = '#141a26';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(left, lineY); ctx.lineTo(w - right, lineY); ctx.stroke();
+    ctx.fillStyle = '#748097';
+    ctx.fillText(value.toFixed(1), left - 7, lineY + 3);
+  }
+  ctx.save();
+  ctx.translate(11, top + plotHeight / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#748097';
+  ctx.fillText('Indexed close', 0, 0);
+  ctx.restore();
+  const eventIndex = Number.isFinite(Number(call.eventIndex)) ? Number(call.eventIndex) : Math.min(1, stock.length - 1);
+  const evaluationStart = Number.isFinite(Number(call.evaluationStartIndex)) ? Number(call.evaluationStartIndex) : eventIndex;
+  const evaluationEnd = Number.isFinite(Number(call.evaluationEndIndex)) ? Number(call.evaluationEndIndex) : stock.length - 1;
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
+  ctx.fillRect(x(evaluationStart, stock.length), top, Math.max(0, x(evaluationEnd, stock.length) - x(evaluationStart, stock.length)), plotHeight);
+  if (min <= 100 && max >= 100) {
+    ctx.strokeStyle = '#33415c';
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.moveTo(left, y(100)); ctx.lineTo(w - right, y(100)); ctx.stroke(); ctx.setLineDash([]);
+  }
   series.forEach((values, seriesIndex) => {
     ctx.strokeStyle = seriesIndex === 0 ? '#00e599' : '#38bdf8';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
     values.forEach((value, index) => index ? ctx.lineTo(x(index, values.length), y(value)) : ctx.moveTo(x(index, values.length), y(value)));
     ctx.stroke();
+    ctx.fillStyle = ctx.strokeStyle;
+    values.forEach((value, index) => { ctx.beginPath(); ctx.arc(x(index, values.length), y(value), 2.5, 0, Math.PI * 2); ctx.fill(); });
   });
-  const eventIndex = Math.min(1, stock.length - 1);
   ctx.strokeStyle = '#f5b041';
+  ctx.lineWidth = 2;
   ctx.setLineDash([4, 4]);
-  ctx.beginPath(); ctx.moveTo(x(eventIndex, stock.length), 0); ctx.lineTo(x(eventIndex, stock.length), h); ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle = '#f5b041'; ctx.font = '11px IBM Plex Mono'; ctx.fillText('Earnings Call', x(eventIndex, stock.length) + 6, 16);
+  ctx.beginPath(); ctx.moveTo(x(eventIndex, stock.length), top); ctx.lineTo(x(eventIndex, stock.length), top + plotHeight); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#f5b041'; ctx.font = '600 10px IBM Plex Mono'; ctx.textAlign = 'left'; ctx.fillText('CALL', Math.min(w - 45, x(eventIndex, stock.length) + 5), top - 5);
+  ctx.strokeStyle = '#a7b4c9';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([2, 3]);
+  ctx.beginPath(); ctx.moveTo(x(evaluationEnd, stock.length), top); ctx.lineTo(x(evaluationEnd, stock.length), top + plotHeight); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#a7b4c9';
+  ctx.textAlign = 'right'; ctx.fillText('T+5', Math.min(w - 5, x(evaluationEnd, stock.length) + 22), top - 5);
+  const labels = Array.isArray(call.chartLabels) ? call.chartLabels : stock.map((_, index) => `T${index - 5 >= 0 ? '+' : ''}${index - 5}`);
+  const tickSet = new Set([0, 2, 4, Math.max(0, Math.min(stock.length - 1, Math.round(eventIndex))), Math.max(0, Math.min(stock.length - 1, Math.round(evaluationEnd))), stock.length - 1]);
+  ctx.textAlign = 'center';
+  ctx.font = '10px IBM Plex Mono';
+  [...tickSet].sort((a, b) => a - b).forEach((index) => {
+    const xx = x(index, stock.length);
+    ctx.fillStyle = '#a7b4c9';
+    ctx.fillText(labels[index] || `T${index - 5}`, xx, h - 23);
+    ctx.fillStyle = '#59667c';
+    ctx.fillText(dates[index] || '', xx, h - 9);
+  });
+  canvas.setAttribute('aria-label', `Historical indexed stock price chart from ${dates[0] || 'T-5'} to ${dates[dates.length - 1] || 'T+5'} with an earnings call marker and five-session evaluation endpoint.`);
 }
 
 function renderReliability() {
@@ -421,8 +527,15 @@ function bindSearch() {
 }
 
 function bindFilters() {
-  document.querySelectorAll('[data-filter-type]').forEach((button) => {
-    button.addEventListener('click', () => setFilter(button.dataset.filterType, button.dataset.filterValue, button));
+  // Use one delegated listener so the controls remain interactive even if the
+  // data request is still loading or a later render replaces their container.
+  if (document.body.dataset.filtersBound === 'true') return;
+  document.body.dataset.filtersBound = 'true';
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest?.('[data-filter-type]');
+    if (!button) return;
+    event.preventDefault();
+    setFilter(button.dataset.filterType, button.dataset.filterValue, button);
   });
 }
 
@@ -449,7 +562,9 @@ async function boot() {
 
 function updateFilterUI() {
   document.querySelectorAll('[data-filter-type]').forEach((button) => {
-    button.classList.toggle('active', state.filters[button.dataset.filterType] === button.dataset.filterValue);
+    const isActive = state.filters[button.dataset.filterType] === button.dataset.filterValue;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
   });
 }
 
@@ -458,4 +573,7 @@ window.setFilter = (type, value, button) => { setFilter(type, value, button); };
 window.onModelChange = onModelChange;
 window.loadDetail = loadDetail;
 
+// Bind before the data request starts so the controls never appear clickable
+// without responding to input.
+bindFilters();
 document.addEventListener('DOMContentLoaded', boot);
