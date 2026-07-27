@@ -1,0 +1,20 @@
+{
+  "sample_rows": 886,
+  "companies": 61,
+  "market_features": [
+    "momentum_5d",
+    "momentum_20d",
+    "volatility_20d",
+    "market_momentum_20d",
+    "beta_120d"
+  ],
+  "walk_forward_years": [
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "holdout_cutoff_year": 2023,
+  "threshold": 0.5,
+  "note": "No-transcript baselines evaluated on the exact complete-language 886-event Industrials sample."
+}

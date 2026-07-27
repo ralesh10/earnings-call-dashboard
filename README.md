@@ -1,6 +1,6 @@
 # Earnings Call Intelligence Dashboard
 
-An offline Streamlit presentation dashboard for comparing earnings-call language with a company's historical market outcomes. The app loads one validated, versioned model artifact bundle at a time; it does not fetch transcripts, prices, or secrets at runtime.
+An offline Streamlit research workspace for comparing earnings-call language with a company's historical market outcomes. The app loads one validated, versioned model artifact bundle as the active context while keeping sibling bundles available for contextual comparison; it does not fetch transcripts, prices, or secrets at runtime.
 
 ## Run locally
 
@@ -11,7 +11,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The app discovers validated sibling bundles under `artifacts/` and provides a model dropdown. The stable reference is `artifacts/original_baseline/`; the richer sentence-plus-historical model is marked `* Experimental` and lives in `artifacts/experimental_rich/`.
+The app discovers validated sibling bundles under `artifacts/`. The richer sentence-plus-historical model is the default research context because it contains stored out-of-sample predictions; it is marked `* Experimental` and lives in `artifacts/experimental_rich/`. The stable reference remains available from call detail.
 
 The original root-level files are retained only as migration/reference copies and are not loaded by the application.
 
@@ -36,15 +36,18 @@ run_manifest.json
 
 `feature_schema.json` must declare an ordered, unique `feature_columns` list. Target, future-return, and realized-outcome fields are rejected as model features. The target may remain in `feature_table.csv` so historical backtest context can be displayed separately.
 
-Bundles can include `status: "experimental"` in their schema or manifest. Those models are labeled with `* Experimental` in the selector and receive a warning in the sidebar.
+Bundles can include `status: "experimental"` in their schema or manifest. Those models are labeled with `* Experimental` when selected for call detail. The permanent sidebar has been removed so model choice stays in context with the call being investigated.
 
-## Dashboard sections
+## Dashboard flow
 
-- **Signal:** probability gauge, signal label, and active model metadata.
-- **Language profile:** presentation/Q&A comparison and richer sentence/dictionary features when available.
-- **Call history:** prior calls and a downloadable selected-call record.
-- **Research context:** stored validation metrics, target definition, and limitations.
-- **Model comparison:** frozen same-sample walk-forward and exploratory holdout comparisons for the original and experimental models, including AUC, accuracy, precision, recall, F1, log loss, and Brier score.
+- **Home:** a compact explanation of the product, its five-session target, the validation concept, and links into the research flow.
+- **Calls:** a company-first explorer that defaults to validated calls, groups sequential calls by company, supports search/filtering, and paginates older results.
+- **Call detail:** the primary research view with a directional signal, confidence, base-rate comparison, progressive-disclosure evidence, optional event-window price charts, model comparison, backtest context, and technical details.
+- **Reliability:** compact model cards, a labeled AUC comparison chart, Brier score, sample context, methodology, and the current nuanced comparison result.
+
+Prediction provenance is shown per call as **Out-of-sample holdout**, **Walk-forward validated**, **Retrospective inference**, or **Unavailable**. Missing optional price series, transcript evidence, and feature groups are called out instead of being replaced with fabricated content.
+
+The model lab prioritizes walk-forward AUC, latest holdout AUC, Brier score, sample size, and evaluation period. Accuracy, precision, recall, F1, log loss, and other raw metrics remain available under the technical details expander.
 
 Historical abnormal returns are shown only in the clearly labeled backtest section; they are never passed to the model as inputs.
 

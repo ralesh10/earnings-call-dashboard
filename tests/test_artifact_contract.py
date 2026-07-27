@@ -11,6 +11,7 @@ from artifact_contract import (  # noqa: E402
     ArtifactValidationError,
     _validate_predictions,
     _validate_schema,
+    discover_artifact_dirs,
     load_artifact_bundle,
 )
 
@@ -111,3 +112,34 @@ def test_invalid_prediction_probability_is_rejected():
     })
     with pytest.raises(ArtifactValidationError, match=r"outside \[0, 1\]"):
         _validate_predictions(predictions)
+
+
+def test_stored_prediction_lookup_preserves_provenance(tmp_path):
+    bundle_root = tmp_path / "stored"
+    write_bundle(bundle_root)
+    pd.DataFrame(
+        {
+            "symbol": ["AAA"],
+            "call_datetime": ["2024-04-01T08:00:00"],
+            "probability": [0.71],
+            "split": ["final_holdout"],
+        }
+    ).to_csv(bundle_root / "predictions.csv", index=False)
+
+    bundle = load_artifact_bundle(bundle_root)
+    stored = bundle.stored_prediction("AAA", "2024-04-01T08:00:00")
+
+    assert stored is not None
+    assert stored["probability"] == pytest.approx(0.71)
+    assert stored["split"] == "final_holdout"
+    assert bundle.stored_prediction("AAA", "2023-01-01T08:00:00") is None
+
+
+def test_discovery_ignores_report_only_directories(tmp_path):
+    bundle_root = tmp_path / "bundle"
+    report_root = tmp_path / "model_comparison"
+    write_bundle(bundle_root)
+    report_root.mkdir()
+    (report_root / "run_manifest.json").write_text(json.dumps({"rows": 10}))
+
+    assert discover_artifact_dirs(tmp_path) == [bundle_root]

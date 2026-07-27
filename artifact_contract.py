@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -15,10 +16,20 @@ import pandas as pd
 
 REQUIRED_FILES = ("model.joblib", "feature_schema.json", "feature_table.csv", "run_manifest.json")
 OPTIONAL_FILES = ("predictions.csv", "metrics.csv")
+# A comparison/report directory can contain a run manifest without being a
+# selectable model bundle. Require at least one model-data marker before
+# treating a directory as a bundle candidate.
+BUNDLE_MARKER_FILES = ("model.joblib", "feature_schema.json", "feature_table.csv")
 FORBIDDEN_FEATURE_MARKERS = (
     "label", "target", "abnormal_return", "future_return", "stock_return",
     "market_return", "return_5d", "actual_outcome", "realized_return",
 )
+PREDICTION_STATUSES = {
+    "out_of_sample_holdout",
+    "walk_forward_validated",
+    "retrospective_inference",
+    "unavailable",
+}
 
 
 class ArtifactValidationError(ValueError):
@@ -63,6 +74,45 @@ class ArtifactBundle:
     def feature_columns(self) -> list[str]:
         return list(self.schema["feature_columns"])
 
+    @property
+    def prediction_source(self) -> str:
+        """Describe where per-call probabilities come from, when declared."""
+        return str(self.manifest.get("prediction_source") or self.schema.get("prediction_source") or "")
+
+    @property
+    def validation_summary(self) -> dict[str, Any]:
+        """Return optional human-facing validation metadata without requiring it."""
+        value = self.schema.get("validation_summary") or self.manifest.get("validation_summary") or {}
+        return value if isinstance(value, dict) else {}
+
+    @property
+    def optional_metadata(self) -> dict[str, Any]:
+        """Expose optional artifact metadata for richer UI layers."""
+        merged: dict[str, Any] = {}
+        for source in (self.manifest.get("metadata"), self.schema.get("metadata")):
+            if isinstance(source, dict):
+                merged.update(source)
+        return merged
+
+    def stored_prediction(self, symbol: str, call_datetime: Any) -> pd.Series | None:
+        """Return the stored prediction row for a call, when one exists.
+
+        A missing row is meaningful: the dashboard must distinguish stored
+        out-of-sample predictions from ad hoc model inference on historical
+        feature rows.
+        """
+        if self.predictions is None:
+            return None
+        predictions = self.predictions.copy()
+        predictions["symbol"] = predictions["symbol"].astype(str)
+        predictions["call_datetime"] = pd.to_datetime(predictions["call_datetime"], errors="coerce")
+        timestamp = pd.to_datetime(call_datetime, errors="coerce")
+        matched = predictions[
+            (predictions["symbol"] == str(symbol))
+            & (predictions["call_datetime"] == timestamp)
+        ]
+        return matched.iloc[-1] if not matched.empty else None
+
 
 def discover_artifact_dirs(root: str | Path | None = None) -> list[Path]:
     """Find model bundles for the model selector.
@@ -70,8 +120,9 @@ def discover_artifact_dirs(root: str | Path | None = None) -> list[Path]:
     ``EARNINGS_ARTIFACT_DIR`` remains a deployment override for one bundle.
     For the local/demo app, sibling bundles under ``artifacts/`` are exposed
     as selectable models. A directory is considered a bundle candidate if it
-    contains at least one contract file, so an incomplete bundle can produce
-    a visible validation error instead of silently disappearing.
+    contains at least one model-data marker, so an incomplete bundle can
+    produce a visible validation error instead of silently disappearing.
+    Report directories containing only comparison manifests are ignored.
     """
     forced = os.environ.get("EARNINGS_ARTIFACT_DIR") if root is None else None
     if forced:
@@ -87,11 +138,11 @@ def discover_artifact_dirs(root: str | Path | None = None) -> list[Path]:
 
     if not candidate_root.is_dir():
         raise ArtifactValidationError(f"Artifact root does not exist: {candidate_root}")
-    if any((candidate_root / name).exists() for name in REQUIRED_FILES):
+    if any((candidate_root / name).exists() for name in BUNDLE_MARKER_FILES):
         return [candidate_root]
     candidates = [
         path for path in sorted(candidate_root.iterdir())
-        if path.is_dir() and any((path / name).exists() for name in REQUIRED_FILES)
+        if path.is_dir() and any((path / name).exists() for name in BUNDLE_MARKER_FILES)
     ]
     if not candidates:
         raise ArtifactValidationError(f"No artifact bundles found under: {candidate_root}")
@@ -177,6 +228,13 @@ def _validate_predictions(predictions: pd.DataFrame | None) -> None:
         raise ArtifactValidationError("predictions.csv contains invalid call_datetime values.")
     if keys.duplicated().any():
         raise ArtifactValidationError("predictions.csv contains duplicate symbol + call_datetime keys.")
+    if "prediction_status" in predictions:
+        statuses = predictions["prediction_status"].dropna().astype(str).str.strip().str.lower()
+        invalid = sorted(set(statuses) - PREDICTION_STATUSES)
+        if invalid:
+            raise ArtifactValidationError(
+                f"predictions.csv contains unsupported prediction_status values: {invalid}"
+            )
 
 
 def _repair_serialized_model_compatibility(model: Any) -> Any:
@@ -249,7 +307,9 @@ def load_artifact_bundle(root: str | Path | None = None) -> ArtifactBundle:
     _validate_predictions(predictions)
     try:
         sample = table[schema["feature_columns"]].apply(pd.to_numeric, errors="coerce").head(1)
-        output = np.asarray(model.predict_proba(sample))
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="X has feature names, but LogisticRegression was fitted without feature names")
+            output = np.asarray(model.predict_proba(sample))
     except Exception as exc:
         raise ArtifactValidationError(f"model.joblib could not score the feature schema: {exc}") from exc
     if output.ndim != 2 or output.shape[0] != 1 or output.shape[1] < 2:
