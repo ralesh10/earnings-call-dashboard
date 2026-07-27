@@ -37,96 +37,147 @@ PAGE_SIZE = 20
 def _inject_css() -> None:
     st.markdown(
         """
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
         <style>
         :root {
-            --bg: #111318;
-            --surface: #181b22;
-            --surface-raised: #20242d;
-            --surface-soft: #15181e;
-            --border: #303642;
-            --border-strong: #424b5c;
-            --text: #f5f6f8;
-            --muted: #a5adba;
-            --accent: #9aa9ff;
-            --accent-strong: #b8c1ff;
-            --accent-soft: rgba(154,169,255,.13);
-            --amber: #f1c56d;
-            --positive: #8ccba7;
-            --negative: #e6a0a0;
+            --bg: #07090e;
+            --surface: #0d1118;
+            --surface-raised: #131822;
+            --surface-hover: #19202e;
+            --border: #1e2636;
+            --border-soft: #141a26;
+            --border-focus: #33415c;
+            --text: #eef2f9;
+            --muted: #8c97ab;
+            --muted-dim: #545f73;
+            --gold: #f5b041;
+            --gold-dim: #9a6f28;
+            --gold-soft: rgba(245,176,65,.12);
+            --amber: #f5b041;
+            --up: #00e599;
+            --up-soft: rgba(0,229,153,.12);
+            --down: #ff4d6d;
+            --down-soft: rgba(255,77,109,.12);
+            --neutral: #38bdf8;
+            --neutral-soft: rgba(56,189,248,.12);
+            --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
         }
 
-        .stApp { background: var(--bg); color: var(--text); }
+        * { box-sizing: border-box; }
+        .stApp { background: var(--bg); color: var(--text); font-family: var(--font-body); }
         [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] { display: none; }
-        .block-container { max-width: 1420px; padding-top: 1.05rem; padding-bottom: 3.5rem; }
-        .brand-row { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-bottom: .65rem; }
-        .brand { color: var(--text); font-size: .93rem; font-weight: 800; letter-spacing: -.01em; }
-        .brand-meta { color: var(--muted); font-size: .78rem; }
-        .eyebrow { color: var(--accent-strong); letter-spacing: .14em; text-transform: uppercase; font-size: .7rem; font-weight: 850; }
-        .app-title { margin: .12rem 0 .25rem; color: var(--text); font-size: 2.35rem; line-height: 1.05; font-weight: 780; letter-spacing: -.035em; }
-        .app-subtitle { color: var(--muted); margin: 0 0 1.15rem; max-width: 820px; font-size: 1rem; line-height: 1.55; }
-        .section-note { color: var(--muted); font-size: .92rem; line-height: 1.5; margin-top: -.35rem; max-width: 860px; }
-        .intro-panel, .signal-panel, .probability-panel, .availability-panel, .narrative-panel {
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            background: linear-gradient(145deg, rgba(32,36,45,.98), rgba(24,27,34,.98));
-            padding: 1.2rem 1.3rem;
-        }
-        .intro-panel { min-height: 190px; }
-        .signal-panel { min-height: 208px; }
-        .probability-panel { min-height: 208px; }
-        .intro-panel h2, .signal-panel h2 { margin: .2rem 0 .45rem; font-size: 1.6rem; letter-spacing: -.02em; }
-        .intro-panel p, .signal-panel p, .probability-panel p, .narrative-panel p { color: var(--muted); line-height: 1.55; margin: .2rem 0; }
-        .card-kicker { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; }
-        .card-title { color: var(--text); font-size: 1.02rem; font-weight: 750; margin: .2rem 0 .15rem; line-height: 1.3; }
-        .card-meta { color: var(--muted); font-size: .84rem; line-height: 1.45; }
-        .call-card, .model-card { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 1rem 1.05rem; min-height: 175px; }
-        .call-card { min-height: 192px; }
-        .model-card { min-height: 205px; }
-        .call-card:hover, .model-card:hover { border-color: var(--border-strong); }
-        .call-card .card-value { color: var(--text); font-size: 1.35rem; font-weight: 800; margin: .55rem 0 .2rem; }
-        .signal-positive { color: var(--accent-strong); font-weight: 850; }
-        .signal-negative { color: var(--accent-strong); font-weight: 850; }
-        .signal-neutral { color: var(--amber); font-weight: 850; }
-        .outcome-positive { color: var(--positive); font-weight: 850; }
-        .outcome-negative { color: var(--negative); font-weight: 850; }
-        .status-pill { display: inline-block; padding: .23rem .52rem; border-radius: 999px; font-size: .7rem; font-weight: 800; letter-spacing: .01em; background: #2b313c; color: #d7dce6; }
-        .status-validated { background: rgba(140,203,167,.14); color: #a9dfbd; }
-        .status-retro { background: rgba(241,197,109,.14); color: #f4d58f; }
-        .status-unavailable { background: rgba(230,160,160,.14); color: #f1b6b6; }
-        .status-neutral { background: rgba(154,169,255,.14); color: #c5ccff; }
-        .small-tag { color: var(--muted); font-size: .78rem; }
-        .nav-caption { color: var(--muted); font-size: .76rem; margin: .1rem 0 -.4rem; }
-        .process-step { border-top: 2px solid var(--border-strong); padding-top: .75rem; }
-        .process-step strong { display: block; color: var(--text); font-size: .95rem; margin-bottom: .2rem; }
-        .process-step span { color: var(--muted); font-size: .82rem; line-height: 1.45; }
+        .block-container { max-width: 1440px; padding: 0 1.4rem 3.5rem; }
+        h1, h2, h3, h4, h5 { font-family: var(--font-display); color: var(--text); }
+        .topbar-shell { border-bottom: 1px solid var(--border); background: rgba(13,17,24,.96); margin: 0 -1.4rem 1rem; padding: .7rem 1.4rem .35rem; }
+        .brand-row { display: flex; align-items: center; gap: .65rem; min-height: 34px; }
+        .brand-mark { width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg,var(--gold),var(--gold-dim)); display: inline-flex; align-items: center; justify-content: center; color: #07090e; font: 700 12px var(--font-mono); }
+        .brand-title { font: 700 15px var(--font-display); letter-spacing: -.02em; }
+        .brand-badge { border: 1px solid var(--border); background: var(--surface-raised); color: var(--muted); border-radius: 4px; padding: 2px 6px; font: 10px var(--font-mono); text-transform: uppercase; }
+        .brand-meta { color: var(--muted); font: 11px var(--font-mono); }
+        .eyebrow { color: var(--gold); font: 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; margin-bottom: .35rem; }
+        .app-title { margin: .1rem 0 .25rem; color: var(--text); font: 700 1.85rem/1.15 var(--font-display); letter-spacing: -.03em; }
+        .app-subtitle, .section-note { color: var(--muted); max-width: 900px; font-size: .93rem; line-height: 1.5; }
+        .card, .card-raised, .intro-panel, .signal-panel, .probability-panel, .availability-panel, .narrative-panel, .model-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.15rem; }
+        .card-raised { background: var(--surface-raised); }
+        .intro-panel, .signal-panel, .probability-panel { min-height: 200px; }
+        .intro-panel h2, .signal-panel h2 { margin: .25rem 0 .5rem; font-size: 1.5rem; }
+        .intro-panel p, .signal-panel p, .probability-panel p, .narrative-panel p { color: var(--muted); line-height: 1.5; }
+        .card-kicker, .stat-lbl { color: var(--muted); font: 10px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+        .card-title { color: var(--text); font-size: 1rem; font-weight: 700; line-height: 1.3; }
+        .card-meta, .small-tag { color: var(--muted); font-size: .8rem; line-height: 1.45; }
+        .call-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .8rem; min-height: 0; }
+        .call-card .card-value { color: var(--text); font: 600 1rem var(--font-mono); margin: .35rem 0; }
+        .model-card { min-height: 176px; }
+        .signal-positive { color: var(--up); font-weight: 800; }
+        .signal-negative { color: var(--down); font-weight: 800; }
+        .signal-neutral { color: var(--neutral); font-weight: 800; }
+        .outcome-positive { color: var(--up); font-weight: 800; }
+        .outcome-negative { color: var(--down); font-weight: 800; }
+        .status-pill, .badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 4px; padding: 2px 7px; font: 600 10px var(--font-mono); }
+        .status-validated, .badge-up { background: var(--up-soft); border: 1px solid rgba(0,229,153,.28); color: var(--up); }
+        .status-retro, .badge-gold { background: var(--gold-soft); border: 1px solid rgba(245,176,65,.28); color: var(--gold); }
+        .status-unavailable, .badge-down { background: var(--down-soft); border: 1px solid rgba(255,77,109,.28); color: var(--down); }
+        .status-neutral, .badge-neutral { background: var(--neutral-soft); border: 1px solid rgba(56,189,248,.28); color: var(--neutral); }
+        .badge-muted { background: var(--surface-raised); border: 1px solid var(--border); color: var(--muted); }
+        .infoicon { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border: 1px solid var(--muted-dim); border-radius: 50%; color: var(--muted); font: 10px var(--font-mono); cursor: help; margin-left: 3px; }
+        .infoicon:hover { border-color: var(--gold); color: var(--gold); }
+        .infoicon .tip { visibility: hidden; opacity: 0; position: absolute; width: 240px; margin: -8px 0 0 8px; padding: 9px 11px; background: #161c28; border: 1px solid var(--border-focus); border-radius: 6px; color: var(--text); font: 11px/1.4 var(--font-body); text-transform: none; z-index: 50; box-shadow: 0 10px 25px rgba(0,0,0,.55); }
+        .infoicon:hover .tip { visibility: visible; opacity: 1; }
+        .section-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin: 1.8rem 0 .8rem; border-bottom: 1px solid var(--border); padding-bottom: .55rem; }
+        .section-header h2 { font-size: 1.1rem; }
+        .section-header .sub { color: var(--muted); font: 11px var(--font-mono); }
+        .hero-stats, .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .7rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-soft); }
+        .stat-box { background: var(--surface-raised); padding: .7rem .8rem; border: 1px solid var(--border-soft); border-radius: 6px; }
+        .stat-num { color: var(--text); font: 700 1.25rem var(--font-mono); margin-bottom: .15rem; }
+        .text-up { color: var(--up); } .text-down { color: var(--down); } .text-gold { color: var(--gold); } .text-neutral { color: var(--neutral); } .text-mono { font-family: var(--font-mono); }
+        .pipeline-flow, .status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .7rem; }
+        .status-grid { grid-template-columns: repeat(3, 1fr); }
+        .flow-node, .status-box { background: var(--surface-raised); border: 1px solid var(--border); border-radius: 6px; padding: .85rem; }
+        .flow-step { color: var(--gold); font: 10px var(--font-mono); text-transform: uppercase; margin-bottom: .25rem; }
+        .flow-title, .status-box h4 { color: var(--text); font-size: .86rem; font-weight: 700; margin: 0 0 .35rem; }
+        .flow-desc, .status-box p { color: var(--muted); font-size: .75rem; line-height: 1.45; margin: 0; }
+        .filter-bar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 8px; padding: .85rem 1rem; }
+        .data-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .table-head { display: grid; grid-template-columns: 1.5fr 1.1fr 1.15fr 1.4fr .9fr 1fr .55fr; gap: .6rem; padding: .6rem .8rem; background: var(--surface-raised); color: var(--muted); font: 10px var(--font-mono); letter-spacing: .05em; text-transform: uppercase; }
+        .screener-row { display: grid; grid-template-columns: 1.5fr 1.1fr 1.15fr 1.4fr .9fr 1fr .55fr; gap: .6rem; align-items: center; padding: .7rem .8rem; border-top: 1px solid var(--border-soft); font-size: .78rem; }
+        .screener-row:hover { background: var(--surface-hover); }
+        .screener-cell { min-width: 0; }
+        .screener-cell strong { color: var(--text); }
+        .detail-header-controls { display: flex; justify-content: space-between; align-items: end; gap: 1rem; margin: 1rem 0 1.1rem; }
+        .detail-grid { display: grid; grid-template-columns: 320px 1fr; gap: 1.1rem; align-items: start; }
+        .detail-left, .detail-right { display: flex; flex-direction: column; gap: 1rem; }
+        .gauge-card { text-align: center; padding: 1.2rem; }
+        .gauge-wrap { width: 160px; height: 82px; margin: .7rem auto .6rem; overflow: hidden; position: relative; }
+        .gauge-bg, .gauge-fill { position: absolute; width: 160px; height: 160px; border-radius: 50%; border: 15px solid var(--border-soft); border-bottom-color: transparent; border-right-color: transparent; transform: rotate(-45deg); }
+        .gauge-fill { border-color: var(--gold); border-bottom-color: transparent; border-right-color: transparent; }
+        .gauge-val { font: 700 1.65rem var(--font-mono); margin-top: -.25rem; }
+        .gauge-sub { color: var(--muted); font: 11px var(--font-mono); margin-top: .25rem; }
+        .fallback-banner { display: flex; gap: .7rem; background: var(--neutral-soft); border: 1px solid rgba(56,189,248,.3); border-radius: 6px; padding: .75rem .9rem; margin-bottom: .9rem; color: var(--muted); font-size: .8rem; }
+        .feature-container { display: flex; flex-direction: column; gap: 1rem; }
+        .f-bar-wrap { display: flex; align-items: center; gap: .6rem; width: 100%; }
+        .f-bar-label { width: 190px; color: var(--text); font-size: .8rem; flex-shrink: 0; }
+        .f-bar-track { flex: 1; height: 7px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+        .f-bar-fill { height: 100%; border-radius: 3px; }
+        .f-bar-val { width: 56px; text-align: right; font: 11px var(--font-mono); }
+        .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: .7rem; }
+        .chart-note { color: var(--muted); font: 11px/1.45 var(--font-mono); background: var(--surface-raised); border-left: 3px solid var(--gold); border-radius: 4px; padding: .55rem .7rem; }
+        .availability-panel { border-color: rgba(245,176,65,.35); background: var(--gold-soft); }
+        .availability-panel strong { color: var(--gold); }
+        .availability-panel ul { color: var(--muted); margin: .45rem 0 0 1.1rem; }
+        .narrative-panel { border-left: 3px solid var(--gold); background: var(--gold-soft); }
+        .narrative-panel strong { color: var(--gold); }
+        .model-status { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; min-width: 155px; padding: .3rem .55rem; background: var(--up-soft); border: 1px solid rgba(0,229,153,.25); border-radius: 4px; color: var(--up); font: 11px var(--font-mono); }
+        .model-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--up); box-shadow: 0 0 6px var(--up); }
+        .tape-wrap { margin: 0 -1.4rem 1rem; background: var(--surface); border-bottom: 1px solid var(--border-soft); border-top: 1px solid var(--border-soft); overflow: hidden; white-space: nowrap; height: 30px; display: flex; align-items: center; }
+        .tape { display: inline-flex; gap: 2rem; min-width: max-content; animation: tape 45s linear infinite; }
+        .tape-wrap:hover .tape { animation-play-state: paused; }
+        @keyframes tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .tape-item { color: var(--muted); font: 11px var(--font-mono); display: inline-flex; gap: .35rem; align-items: center; }
+        .tape-item b { color: var(--text); } .tape-item .up { color: var(--up); } .tape-item .down { color: var(--down); } .tape-item .neutral { color: var(--neutral); }
+        button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [role="button"]:focus-visible { outline: 2px solid var(--gold) !important; outline-offset: 2px; }
+        div[data-testid="stRadio"] > label, div[data-testid="stSelectbox"] > label { color: var(--muted) !important; font: 10px var(--font-mono) !important; text-transform: uppercase; letter-spacing: .06em; }
+        div[data-testid="stRadio"] div[role="radiogroup"] { gap: .2rem; }
+        div[data-testid="stRadio"] div[role="radiogroup"] label { color: var(--muted) !important; font: 600 12px var(--font-body) !important; padding: .25rem .65rem; border-radius: 4px; }
+        div[data-testid="stRadio"] div[role="radiogroup"] label:hover { background: var(--surface-hover); color: var(--text) !important; }
+        @media (max-width: 1024px) { .pipeline-flow, .grid-2, .detail-grid { grid-template-columns: 1fr 1fr; } .hero-stats, .stat-grid { grid-template-columns: 1fr 1fr; } .status-grid { grid-template-columns: 1fr; } .f-bar-label { width: 155px; } }
+        @media (max-width: 760px) { .block-container { padding: 0 .75rem 2rem; } .topbar-shell, .tape-wrap { margin-left: -.75rem; margin-right: -.75rem; padding-left: .75rem; padding-right: .75rem; } .pipeline-flow, .grid-2, .detail-grid, .hero-stats, .stat-grid { grid-template-columns: 1fr; } .table-head { display: none; } .screener-row { grid-template-columns: 1fr 1fr; } .screener-row .screener-cell:nth-child(4), .screener-row .screener-cell:nth-child(5), .screener-row .screener-cell:nth-child(6) { display: none; } .f-bar-label { width: 130px; font-size: .72rem; } .detail-header-controls { align-items: stretch; flex-direction: column; } }
         .probability-shell { margin: .8rem 0 .55rem; }
-        .probability-track { position: relative; height: 18px; border-radius: 999px; background: #2b313c; overflow: visible; border: 1px solid #444c5b; }
+        .probability-track { position: relative; height: 18px; border-radius: 999px; background: var(--surface-raised); overflow: visible; border: 1px solid var(--border-focus); }
         .probability-neutral-zone { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: rgba(241,197,109,.2); }
         .probability-interval { position: absolute; top: 3px; bottom: 3px; border-radius: 999px; background: rgba(184,193,255,.45); }
-        .probability-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, #7588ec, #a9b4ff); }
+        .probability-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); }
         .probability-marker { position: absolute; top: -5px; width: 3px; height: 28px; border-radius: 3px; background: #fff; box-shadow: 0 0 0 2px rgba(17,19,24,.85); }
         .probability-base-marker { position: absolute; top: -2px; width: 2px; height: 22px; border-radius: 2px; background: var(--amber); }
-        .probability-labels { display: flex; justify-content: space-between; gap: .5rem; color: var(--muted); font-size: .75rem; margin-top: .45rem; }
-        .probability-legend { display: flex; gap: .85rem; flex-wrap: wrap; color: var(--muted); font-size: .77rem; margin-top: .6rem; }
+        .probability-labels { display: flex; justify-content: space-between; gap: .5rem; color: var(--muted); font: .75rem var(--font-mono); margin-top: .45rem; }
+        .probability-legend { display: flex; gap: .85rem; flex-wrap: wrap; color: var(--muted); font: .77rem var(--font-mono); margin-top: .6rem; }
         .legend-dot { display: inline-block; width: .58rem; height: .58rem; border-radius: 50%; margin-right: .25rem; }
         .legend-model { background: #fff; }
         .legend-base { background: var(--amber); }
         .legend-neutral { background: rgba(241,197,109,.55); }
-        .availability-panel { border-color: rgba(241,197,109,.4); background: rgba(241,197,109,.08); }
-        .availability-panel strong { color: #f6d991; }
-        .availability-panel ul { margin: .55rem 0 0 1.15rem; color: var(--muted); }
-        .availability-panel li { margin: .3rem 0; }
-        .narrative-panel { border-left: 3px solid var(--accent); background: var(--accent-soft); }
-        .narrative-panel strong { color: var(--accent-strong); }
-        .metric-help { color: var(--muted); font-size: .78rem; line-height: 1.45; margin-top: -.6rem; }
-        .table-note { color: var(--muted); font-size: .82rem; line-height: 1.45; }
-        button:focus-visible, input:focus-visible, textarea:focus-visible, [role="button"]:focus-visible { outline: 3px solid var(--accent-strong) !important; outline-offset: 2px; }
-        @media (max-width: 800px) {
-            .block-container { padding: .75rem .75rem 2rem; }
-            .brand-row { align-items: flex-start; flex-direction: column; gap: .15rem; }
-            .app-title { font-size: 1.8rem; }
-            .intro-panel, .signal-panel, .probability-panel { min-height: 0; }
-        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -695,6 +746,350 @@ def _prepare_table(bundle: ArtifactBundle) -> pd.DataFrame:
     return table
 
 
+def _bundle_metric(bundle: ArtifactBundle, split: str, name: str) -> float | None:
+    if bundle.metrics is None or bundle.metrics.empty or "split" not in bundle.metrics or name not in bundle.metrics:
+        return None
+    rows = bundle.metrics[bundle.metrics["split"].eq(split)]
+    return _as_float(rows.iloc[0][name]) if not rows.empty else None
+
+
+def _spotlight_features(row: pd.Series) -> list[tuple[str, float | None, str, str]]:
+    candidates = [
+        ("Q&A historical surprise", _first_feature(row, ("qa_sent_mean_z", "qa_sent_mean")), "var(--up)", "Q&A tone relative to the company’s available history."),
+        ("Presentation tone", _first_feature(row, ("pres_sent_mean_z", "pres_net_sentiment")), "var(--neutral)", "Prepared presentation sentiment or historical surprise."),
+        ("Q&A / presentation gap", _first_feature(row, ("qa_minus_pres_sent_mean", "sentiment_mismatch_pos")), "var(--gold)", "Difference between unscripted Q&A and prepared remarks."),
+        ("Market momentum", _first_feature(row, ("momentum_20d", "momentum_5d")), "var(--neutral)", "Recent market movement used as context."),
+    ]
+    return [(label, value, color, tip) for label, value, color, tip in candidates if value is not None]
+
+
+def _feature_bar_html(label: str, value: float | None, color: str, tip: str, scale: float = 2.0) -> str:
+    if value is None:
+        return ""
+    width = min(100.0, max(8.0, abs(value) / scale * 100))
+    sign = "+" if value > 0 else ""
+    return (
+        f'<div class="f-bar-wrap"><span class="f-bar-label">{_escape(label)} '
+        f'<span class="infoicon" title="{_escape(tip)}">i</span></span>'
+        f'<div class="f-bar-track"><div class="f-bar-fill" style="width:{width:.1f}%;background:{color};"></div></div>'
+        f'<span class="f-bar-val" style="color:{color}">{sign}{value:.2f}</span></div>'
+    )
+
+
+def _render_ticker(table: pd.DataFrame) -> None:
+    if table.empty:
+        return
+    items: list[str] = []
+    for _, row in table.head(12).iterrows():
+        tone = str(row.get("_tone", "neutral"))
+        css = "up" if tone == "positive" else "down" if tone == "negative" else "neutral"
+        signal = str(row.get("_signal", "Unavailable"))
+        probability = _format_percent(_as_float(row.get("_probability")))
+        date = pd.to_datetime(row.get("call_datetime"), errors="coerce")
+        quarter = row.get("quarter")
+        date_text = str(quarter) if quarter not in (None, "", "nan") else (date.strftime("%b %Y") if pd.notna(date) else "—")
+        items.append(
+            f'<span class="tape-item"><b>{_escape(row.get("symbol", "—"))}</b> '
+            f'<span class="{css}">{_escape(signal)} {probability}</span> ({date_text})</span>'
+        )
+    tape = "".join(items)
+    st.markdown(f'<div class="tape-wrap"><div class="tape">{tape}{tape}</div></div>', unsafe_allow_html=True)
+
+
+def _open_mockup_call(row: pd.Series) -> None:
+    st.session_state["selected_call_key"] = _call_key(str(row["symbol"]), row["call_datetime"])
+    st.session_state["_next_mockup_view"] = "Call Detail Terminal"
+    st.rerun()
+
+
+def _render_mockup_overview(bundle: ArtifactBundle, table: pd.DataFrame | None = None) -> None:
+    table = table if table is not None else _prepare_table(bundle)
+    base_rate = _base_rate(bundle)
+    center = base_rate or float(bundle.schema.get("prediction_threshold", .5))
+    validated = table[table["_status"].isin(VALIDATED_STATUSES) & table["_probability"].notna()]
+    spotlight = validated.copy()
+    if spotlight.empty:
+        spotlight = table[table["_probability"].notna()].copy()
+    if not spotlight.empty:
+        spotlight["_distance"] = (spotlight["_probability"] - center).abs()
+        spotlight_row = spotlight.sort_values(["_distance", "call_datetime"], ascending=[False, False]).iloc[0]
+    else:
+        spotlight_row = None
+
+    auc = _bundle_metric(bundle, "walk_forward_aggregate", "auc")
+    auc_label = "Walk-forward AUC"
+    if auc is None:
+        auc = _bundle_metric(bundle, "final_holdout", "auc")
+        auc_label = "Latest holdout AUC"
+    mcc = _bundle_metric(bundle, "walk_forward_aggregate", "mcc")
+    company_count = table["symbol"].nunique() if "symbol" in table else 0
+    metric_cards = (
+        f'<div class="hero-stats">'
+        f'<div class="stat-box"><div class="stat-num">{len(table):,}</div><div class="stat-lbl">Events in artifact <span class="infoicon" title="Calls available in the active feature artifact.">i</span></div></div>'
+        f'<div class="stat-box"><div class="stat-num">{company_count:,}</div><div class="stat-lbl">Companies covered</div></div>'
+        f'<div class="stat-box"><div class="stat-num text-up">{_metric_text(pd.Series({"auc": auc}), "auc")}</div><div class="stat-lbl">{_escape(auc_label)} <span class="infoicon" title="Area under the ROC curve. 0.50 is close to no-information ranking.">i</span></div></div>'
+        f'<div class="stat-box"><div class="stat-num text-gold">{_metric_text(pd.Series({"mcc": mcc}), "mcc")}</div><div class="stat-lbl">MCC <span class="infoicon" title="A balanced directional-quality metric. Higher is better; zero is roughly no correlation.">i</span></div></div>'
+        f'</div>'
+    )
+    st.markdown(
+        f'<div class="card-raised"><div class="eyebrow">Executive dialogue &amp; return drift</div>'
+        f'<h1 style="font:700 1.65rem/1.2 var(--font-display);margin:.25rem 0 .55rem;">Predicting five-session post-earnings abnormal returns through linguistic drift</h1>'
+        f'<p class="app-subtitle">This system compares earnings presentations and analyst Q&amp;A with company history and market context, then estimates the chance of a positive five-session abnormal return. It is a research signal, not a price target or trade recommendation.</p>'
+        f'{metric_cards}</div>',
+        unsafe_allow_html=True,
+    )
+    cta_left, cta_right = st.columns([1, 1])
+    with cta_left:
+        if st.button("Launch Screener →", type="primary", use_container_width=True, key="overview-launch-screener"):
+            st.session_state["_next_mockup_view"] = "Screener & Signals"
+            st.rerun()
+    with cta_right:
+        if st.button("Compare Architecture Lineage", use_container_width=True, key="overview-lineage"):
+            st.session_state["_next_mockup_view"] = "Model Reliability & Lineage"
+            st.rerun()
+
+    st.markdown('<div class="section-header"><h2>Signal spotlight</h2><span class="sub">Highest separation from the active artifact base rate</span></div>', unsafe_allow_html=True)
+    if spotlight_row is None:
+        st.info("No scored calls are available for a spotlight in the active artifact.")
+    else:
+        timestamp = pd.to_datetime(spotlight_row["call_datetime"], errors="coerce")
+        date_text = timestamp.strftime("%b %d, %Y · %H:%M") if pd.notna(timestamp) else "Date unavailable"
+        signal = str(spotlight_row["_signal"])
+        tone = str(spotlight_row["_tone"])
+        feature_html = "".join(_feature_bar_html(*item) for item in _spotlight_features(spotlight_row)[:3])
+        st.markdown(
+            f'<div class="card"><div class="eyebrow" style="color:var(--neutral)">Signal spotlight</div>'
+            f'<div style="display:flex;justify-content:space-between;gap:.8rem;align-items:flex-start;">'
+            f'<div><div class="card-title" style="font:600 1rem var(--font-mono);">{_escape(spotlight_row.get("symbol", "—"))} — {_escape(spotlight_row.get("company_name", "Unknown"))}</div>'
+            f'<div class="card-meta">{_escape(date_text)} · {_escape(_phase_label(spotlight_row))} · {_status_pill(str(spotlight_row["_status"]))}</div></div>'
+            f'<span class="badge {"badge-up" if tone == "positive" else "badge-down" if tone == "negative" else "badge-neutral"}">{_escape(signal)} · {_format_percent(_as_float(spotlight_row["_probability"]))}</span></div>'
+            f'<p style="color:var(--muted);border-left:2px solid var(--gold);padding-left:.65rem;margin:.8rem 0;">'
+            f'<strong>Model rationale:</strong> { _escape(_signal(_as_float(spotlight_row["_probability"]), center)[2]) }</p>'
+            f'<div class="feature-container">{feature_html}</div></div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("Open full terminal breakdown →", use_container_width=True, key="overview-open-spotlight"):
+            _open_mockup_call(spotlight_row)
+
+    st.markdown('<div class="section-header"><h2>End-to-end ML pipeline architecture</h2><span class="sub">How transcript signals become a directional estimate</span></div>', unsafe_allow_html=True)
+    stages = [
+        ("Stage 01", "Transcript ingestion & splitting", "Presentation and analyst Q&A are separated before feature extraction."),
+        ("Stage 02", "Sentence NLP features", "Sentiment, entropy, sentence position, and Q&A behavior are summarized."),
+        ("Stage 03", "Historical normalization", "Language measures are compared with the company’s available history where supported."),
+        ("Stage 04", "Direction classifier", "The active model estimates the probability of a positive five-session abnormal return."),
+    ]
+    stage_html = "".join(f'<div class="flow-node"><div class="flow-step">{step}</div><div class="flow-title">{title}</div><div class="flow-desc">{desc}</div></div>' for step, title, desc in stages)
+    st.markdown(f'<div class="pipeline-flow">{stage_html}</div>', unsafe_allow_html=True)
+
+    counts = table["_status"].value_counts().to_dict()
+    status_cards = [
+        ("Validated", "Out-of-sample folds", counts.get("Out-of-sample holdout", 0) + counts.get("Walk-forward validated", 0), "Stored validation provenance is available for this call."),
+        ("Exploratory", "Retrospective archive", counts.get("Retrospective inference", 0), "The model can score the row, but it was not independently held out."),
+        ("Unavailable", "Filtered events", counts.get("Unavailable", 0), "No usable score is available for the active model."),
+    ]
+    status_html = "".join(
+        f'<div class="status-box"><h4><span class="badge {"badge-up" if label == "Validated" else "badge-neutral" if label == "Exploratory" else "badge-muted"}">{label}</span> {title}</h4><div class="stat-num">{count:,}</div><p>{desc}</p></div>'
+        for label, title, count, desc in status_cards
+    )
+    st.markdown('<div class="section-header"><h2>Dataset coverage &amp; validation discipline</h2><span class="sub">Every visible score carries its provenance</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="status-grid">{status_html}</div>', unsafe_allow_html=True)
+
+
+def _render_mockup_screener(bundle: ArtifactBundle, bundles: tuple[ArtifactBundle, ...], table: pd.DataFrame | None = None) -> None:
+    table = table if table is not None else _prepare_table(bundle)
+    base_rate = _base_rate(bundle) or .5
+    st.markdown('<div class="eyebrow">Market intelligence</div><div class="app-title">Screener &amp; Signals</div><p class="app-subtitle">Search earnings calls by company, inspect the active model signal, and keep validation status in view.</p>', unsafe_allow_html=True)
+    filter_left, filter_right = st.columns([3.6, 1.4])
+    with filter_left:
+        dir_filter = st.radio("Signal direction", ["All signals", "Up only", "Down only"], horizontal=True, key="mockup_dir_filter")
+    with filter_right:
+        query = st.text_input("Search ticker or company", placeholder="Search ticker or company", key="mockup_screener_search")
+    filter_a, filter_b = st.columns([1, 1])
+    with filter_a:
+        conf_filter = st.radio("Confidence band", ["All", "High", "Medium", "Low"], horizontal=True, key="mockup_conf_filter")
+    with filter_b:
+        status_filter = st.radio("Coverage status", ["Validated", "Exploratory", "Unavailable", "All"], horizontal=True, key="mockup_status_filter")
+
+    filtered = table
+    if query:
+        q = query.upper()
+        names = filtered.get("company_name", pd.Series(index=filtered.index, dtype=str)).astype(str)
+        filtered = filtered[filtered["symbol"].str.upper().str.contains(q, na=False) | names.str.upper().str.contains(q, na=False)]
+    if dir_filter == "Up only":
+        filtered = filtered[filtered["_signal"].eq("Positive")]
+    elif dir_filter == "Down only":
+        filtered = filtered[filtered["_signal"].eq("Negative")]
+    if conf_filter != "All":
+        filtered = filtered[filtered["_conviction"].eq(conf_filter)]
+    if status_filter == "Validated":
+        filtered = filtered[filtered["_status"].isin(VALIDATED_STATUSES)]
+    elif status_filter == "Exploratory":
+        filtered = filtered[filtered["_status"].eq("Retrospective inference")]
+    elif status_filter == "Unavailable":
+        filtered = filtered[filtered["_status"].eq("Unavailable")]
+
+    if filtered.empty:
+        st.warning("No calls match those filters.")
+        return
+
+    page_size = 14
+    page_count = max(1, int(np.ceil(len(filtered) / page_size)))
+    current_page = int(st.session_state.get("mockup_screener_page", 1))
+    if current_page > page_count:
+        st.session_state["mockup_screener_page"] = 1
+        current_page = 1
+    current_page = int(st.number_input("Page", min_value=1, max_value=page_count, value=current_page, step=1, key="mockup_screener_page"))
+    visible = filtered.iloc[(current_page - 1) * page_size: current_page * page_size]
+    st.markdown(f'<div style="display:flex;justify-content:space-between;color:var(--muted);font:11px var(--font-mono);margin:.7rem 0;"><span>Showing {len(visible)} of {len(filtered)} matching calls</span><span>Model: {_escape(bundle.display_name)}</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="data-table-wrap"><div class="table-head"><div>Company &amp; ticker</div><div>Earnings call</div><div>Dataset status</div><div>Active model signal</div><div>Confidence</div><div>Historical 5D outcome</div><div>Action</div></div>', unsafe_allow_html=True)
+    for index, (_, row) in enumerate(visible.iterrows()):
+        timestamp = pd.to_datetime(row["call_datetime"], errors="coerce")
+        date_text = timestamp.strftime("%b %d, %Y · %H:%M") if pd.notna(timestamp) else "Undated"
+        target = str(bundle.schema.get("target_column", "abnormal_return_5d"))
+        actual = _as_float(row.get(target))
+        actual_html = "—" if actual is None else f'<span class="{"text-up" if actual > 0 else "text-down"}">{_format_percent(actual, signed=True)}</span>'
+        tone = str(row["_tone"])
+        signal_html = f'<span class="badge {"badge-up" if tone == "positive" else "badge-down" if tone == "negative" else "badge-neutral"}">{_escape(row["_signal"])} · {_format_percent(_as_float(row["_probability"]))}</span>'
+        status = _status_pill(str(row["_status"]))
+        cols = st.columns([1.5, 1.1, 1.15, 1.4, .9, 1, .55])
+        with cols[0]:
+            st.markdown(f'<div class="screener-cell"><strong>{_escape(row.get("company_name", row["symbol"]))}</strong><br><span class="card-meta">{_escape(row["symbol"])}</span></div>', unsafe_allow_html=True)
+        with cols[1]:
+            st.markdown(f'<div class="screener-cell text-mono">{_escape(date_text)}<br><span class="card-meta">{_escape(_phase_label(row))}</span></div>', unsafe_allow_html=True)
+        with cols[2]:
+            st.markdown(status, unsafe_allow_html=True)
+        with cols[3]:
+            st.markdown(signal_html, unsafe_allow_html=True)
+        with cols[4]:
+            st.markdown(f'<span class="text-mono">{_escape(row["_conviction"])}</span>', unsafe_allow_html=True)
+        with cols[5]:
+            st.markdown(f'<span class="text-mono">{actual_html}</span>', unsafe_allow_html=True)
+        with cols[6]:
+            if st.button("View", key=f"mockup-view-{_call_key(str(row['symbol']), row['call_datetime'])}", use_container_width=True):
+                _open_mockup_call(row)
+    st.markdown('</div>', unsafe_allow_html=True)
+    prev_col, page_col, next_col = st.columns([1, 2, 1])
+    with prev_col:
+        if st.button("← Previous", disabled=current_page <= 1, key="mockup-prev", use_container_width=True):
+            st.session_state["mockup_screener_page"] = current_page - 1
+            st.rerun()
+    with page_col:
+        st.markdown(f'<div style="text-align:center;color:var(--muted);font:11px var(--font-mono);padding:.45rem;">Page {current_page} of {page_count}</div>', unsafe_allow_html=True)
+    with next_col:
+        if st.button("Next →", disabled=current_page >= page_count, key="mockup-next", use_container_width=True):
+            st.session_state["mockup_screener_page"] = current_page + 1
+            st.rerun()
+
+
+def _render_mockup_detail(bundles: tuple[ArtifactBundle, ...], bundle: ArtifactBundle, table: pd.DataFrame | None = None) -> None:
+    if st.button("← Back to Screener & Signals", key="mockup-back-screener"):
+        st.session_state["_next_mockup_view"] = "Screener & Signals"
+        st.rerun()
+    table = table if table is not None else _prepare_table(bundle)
+    if table.empty:
+        st.warning("This artifact has no calls to display.")
+        return
+    selected_key = st.session_state.get("selected_call_key")
+    selected_symbol = str(selected_key).split("|", 1)[0] if selected_key else str(table.iloc[0]["symbol"])
+    symbols = sorted(table["symbol"].unique().tolist())
+    if selected_symbol not in symbols:
+        selected_symbol = symbols[0]
+    company_names = table.groupby("symbol")["company_name"].first().to_dict() if "company_name" in table else {}
+    company_label = lambda symbol: f"{company_names.get(symbol, symbol)} ({symbol})"
+    co_col, call_col = st.columns([1, 1])
+    with co_col:
+        selected_symbol = st.selectbox("Company", symbols, index=symbols.index(selected_symbol), format_func=company_label, key="mockup_detail_company")
+    company_calls = table[table["symbol"] == selected_symbol].sort_values("call_datetime", ascending=False)
+    call_indices = list(company_calls.index)
+    call_labels = []
+    for index in call_indices:
+        row = company_calls.loc[index]
+        stamp = pd.to_datetime(row["call_datetime"], errors="coerce")
+        call_labels.append(f"{stamp.strftime('%b %d, %Y · %H:%M') if pd.notna(stamp) else 'Undated'} · {row['_status']}")
+    default_index = 0
+    if selected_key:
+        for position, index in enumerate(call_indices):
+            if _call_key(selected_symbol, company_calls.loc[index]["call_datetime"]) == selected_key:
+                default_index = position
+                break
+    with call_col:
+        selected_call_label = st.selectbox("Call", call_labels, index=default_index, key=f"mockup_detail_call_{selected_symbol}")
+    selected_index = call_indices[call_labels.index(selected_call_label)]
+    selected = company_calls.loc[[selected_index]].copy()
+    row = selected.iloc[0]
+    st.session_state["selected_call_key"] = _call_key(str(row["symbol"]), row["call_datetime"])
+
+    probability = _as_float(row["_probability"])
+    base_rate = _base_rate(bundle)
+    center = base_rate or float(bundle.schema.get("prediction_threshold", .5))
+    signal, tone, explanation = _signal(probability, center)
+    status = str(row["_status"])
+    timestamp = pd.to_datetime(row["call_datetime"], errors="coerce")
+    date_text = timestamp.strftime("%b %d, %Y · %H:%M") if pd.notna(timestamp) else "Date unavailable"
+    st.markdown(f'<div class="detail-header-controls"><div><div class="eyebrow">{_escape(row["symbol"])} · {_escape(_phase_label(row))} · {_status_pill(status)}</div><div class="app-title">{_escape(row.get("company_name", row["symbol"]))} — {date_text}</div><div class="card-meta">Five-session abnormal-return research signal · {_escape(_status_description(status))}</div></div></div>', unsafe_allow_html=True)
+
+    if status == "Unavailable":
+        st.markdown('<div class="fallback-banner"><span class="text-neutral">i</span><div><strong>No prediction available in the active model.</strong><br>Choose another artifact or inspect the call as an unavailable record. No probability is being inferred.</div></div>', unsafe_allow_html=True)
+    elif status == "Retrospective inference":
+        st.markdown('<div class="fallback-banner"><span class="text-gold">!</span><div><strong>Exploratory archive record.</strong><br>This score is a retrospective model inference, not an out-of-sample validation result.</div></div>', unsafe_allow_html=True)
+
+    detail_left, detail_right = st.columns([.82, 1.7])
+    with detail_left:
+        pct = max(0, min(100, (probability or 0) * 100))
+        gauge_deg = -45 + ((probability or 0) * 180)
+        gauge_value = _format_percent(probability)
+        gauge_color = "var(--up)" if tone == "positive" else "var(--down)" if tone == "negative" else "var(--neutral)"
+        st.markdown(
+            f'<div class="card gauge-card" role="img" aria-label="Model probability {gauge_value}, direction {signal}, confidence {row["_conviction"]}">'
+            f'<div class="eyebrow">Active model direction signal</div><div class="gauge-wrap"><div class="gauge-bg"></div><div class="gauge-fill" style="transform:rotate({gauge_deg:.1f}deg);border-color:{gauge_color};border-bottom-color:transparent;border-right-color:transparent;"></div></div>'
+            f'<div class="gauge-val" style="color:{gauge_color}">{gauge_value}</div><div class="gauge-sub">{_escape(signal)} · {_escape(row["_conviction"])} confidence</div><div style="margin-top:.65rem;">{_status_pill(status)}</div>'
+            f'<div class="card-meta" style="margin-top:.7rem;">Base rate {_format_percent(base_rate)} · Difference {_format_percent((probability - center) if probability is not None else None, signed=True)}</div></div>',
+            unsafe_allow_html=True,
+        )
+        target = str(bundle.schema.get("target_column", "abnormal_return_5d"))
+        actual = _as_float(row.get(target))
+        actual_text = "Unavailable" if actual is None else ("Positive" if actual > 0 else "Negative")
+        actual_class = "text-up" if actual is not None and actual > 0 else "text-down" if actual is not None else ""
+        st.markdown(f'<div class="card"><div class="eyebrow">Market outcome · historical only</div><div class="stat-num {actual_class}">{actual_text}</div><div class="card-meta">{_format_percent(actual, signed=True)} abnormal return over five sessions. This is not a prediction.</div></div>', unsafe_allow_html=True)
+        pres_count = _first_feature(row, ("pres_n_sentences",))
+        qa_count = _first_feature(row, ("qa_n_sentences",))
+        st.markdown(f'<div class="card"><div class="eyebrow">Transcript metadata</div><div style="display:flex;justify-content:space-between;color:var(--muted);font-size:.8rem;"><span>Presentation sentences</span><strong class="text-mono">{_format_number(pres_count)}</strong></div><div style="display:flex;justify-content:space-between;color:var(--muted);font-size:.8rem;margin-top:.45rem;"><span>Q&amp;A sentences</span><strong class="text-mono">{_format_number(qa_count)}</strong></div><div style="display:flex;justify-content:space-between;color:var(--muted);font-size:.8rem;margin-top:.45rem;"><span>Coverage status</span><strong>{_escape(status)}</strong></div></div>', unsafe_allow_html=True)
+
+    with detail_right:
+        st.markdown('<div class="card"><div class="section-header" style="margin:0 0 1rem;"><h2>Why the model responded</h2><span class="sub">Active artifact features</span></div><div class="feature-container">', unsafe_allow_html=True)
+        feature_html = "".join(_feature_bar_html(*item) for item in _spotlight_features(row))
+        if feature_html:
+            st.markdown(feature_html, unsafe_allow_html=True)
+        else:
+            st.info("Human-readable feature evidence is unavailable for this artifact.")
+        st.markdown('</div><p class="card-meta" style="margin:.9rem 0 0;">Feature associations describe what the model used; they are not proof of causation.</p></div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="chart-box"><div class="chart-header"><div><div class="eyebrow" style="margin:0;">Market event window</div><div class="card-meta">Normalized around the earnings call and five-session evaluation window</div></div><span class="badge-muted">HISTORICAL SIMULATION</span></div>', unsafe_allow_html=True)
+        event_available = _render_event_chart(row)
+        if not event_available:
+            st.markdown('<div class="chart-note">Price and benchmark series are not included in the current offline artifact. The chart will appear when source-linked event-window data is added.</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with st.expander("Compare model outputs", expanded=False):
+        _render_call_comparison(_collect_model_results(bundles, str(row["symbol"]), row["call_datetime"]))
+    with st.expander("Source-linked transcript evidence", expanded=False):
+        evidence = row.get("transcript_evidence")
+        if evidence not in (None, "", "nan") and not (isinstance(evidence, float) and pd.isna(evidence)):
+            st.write(evidence)
+        else:
+            st.info("Transcript excerpts are not stored in the current artifact. No generated quote is shown.")
+    with st.expander("Company call history", expanded=False):
+        history = table[table["symbol"] == str(row["symbol"])].sort_values("call_datetime", ascending=False)
+        view = history[[c for c in ("symbol", "company_name", "call_datetime", "_signal", "_probability", "_status") if c in history]].copy()
+        if "call_datetime" in view:
+            view["call_datetime"] = view["call_datetime"].dt.strftime("%b %d, %Y · %H:%M")
+        st.dataframe(view.rename(columns={"_signal":"Direction","_probability":"Probability","_status":"Validation"}), use_container_width=True, hide_index=True)
+    with st.expander("Technical details", expanded=False):
+        explanation_table = _model_explanation(bundle, selected)
+        if not explanation_table.empty:
+            st.dataframe(explanation_table.head(12), use_container_width=True, hide_index=True)
+        st.download_button("Download selected call data", selected.to_csv(index=False).encode("utf-8"), file_name=f"{row['symbol']}_earnings_call.csv", mime="text/csv")
+
 def _open_call(row: pd.Series) -> None:
     st.session_state["selected_call_key"] = _call_key(str(row["symbol"]), row["call_datetime"])
     st.session_state["_next_view"] = "Detail"
@@ -830,8 +1225,8 @@ def _metric_text(row: pd.Series | None, name: str, percent: bool = False) -> str
 
 
 def _render_reliability() -> None:
-    st.markdown('<div class="eyebrow">Reliability</div><div class="app-title">How much should you trust the models?</div>', unsafe_allow_html=True)
-    st.markdown('<p class="app-subtitle">Compare time-separated evaluation results without treating one metric or one holdout as a definitive winner.</p>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">Model evaluation suite</div><div class="app-title">Model Reliability &amp; Lineage</div>', unsafe_allow_html=True)
+    st.markdown('<p class="app-subtitle">Compare architectural iterations, validation lineage, and the limits of the evidence without treating one metric or one holdout as a definitive winner.</p>', unsafe_allow_html=True)
     metrics = _load_comparison_metrics()
     if metrics is None:
         st.warning("The controlled comparison artifact is unavailable.")
@@ -857,6 +1252,22 @@ def _render_reliability() -> None:
                 st.caption(f"Walk-forward 95% range: {_metric_text(walk, 'auc_ci_lower_95')}–{_metric_text(walk, 'auc_ci_upper_95')}")
 
     st.markdown('<div class="narrative-panel"><strong>What the current evidence says</strong><p>The richer model generalizes better across time-separated folds, while the original model performs slightly better on the latest holdout. The evidence does not establish a definitive winner.</p></div>', unsafe_allow_html=True)
+
+    st.subheader("Evaluation table")
+    evaluation_rows = []
+    for model, title, description, badge in model_config:
+        walk = _comparison_row(metrics, model, "walk_forward_aggregate")
+        holdout = _comparison_row(metrics, model, "final_holdout")
+        evaluation_rows.append({
+            "Model": title,
+            "Type": badge,
+            "Walk-forward AUC": _metric_text(walk, "auc"),
+            "Latest holdout AUC": _metric_text(holdout, "auc"),
+            "Walk-forward Brier": _metric_text(walk, "brier"),
+            "95% AUC range": f"{_metric_text(walk, 'auc_ci_lower_95')}–{_metric_text(walk, 'auc_ci_upper_95')}" if walk is not None and "auc_ci_lower_95" in walk else "—",
+            "Events": str(_as_float(walk["n"]) if walk is not None and "n" in walk else "—"),
+        })
+    st.dataframe(pd.DataFrame(evaluation_rows), use_container_width=True, hide_index=True)
 
     st.subheader("AUC across evaluation views")
     st.caption("AUC measures ranking quality. 0.50 is the no-information reference; read the direct labels because the differences are intentionally not exaggerated.")
@@ -905,7 +1316,7 @@ def _render_reliability() -> None:
         plot_bgcolor="rgba(0,0,0,0)",
         font={"color": "#a5adba"},
         showlegend=False,
-        xaxis={"title": "AUC · higher is better", "range": [0, 1], "fixedrange": False, "gridcolor": "#303642", "zeroline": False},
+        xaxis={"title": "AUC · higher is better", "range": [0, 1], "fixedrange": True, "gridcolor": "#303642", "zeroline": False},
         yaxis={"gridcolor": "#303642", "categoryorder": "array", "categoryarray": [item[1] for item in model_config]},
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
@@ -1128,28 +1539,58 @@ def main() -> None:
         st.session_state["active_model_label"] = labels[0]
     active_bundle = label_to_bundle[st.session_state["active_model_label"]]
 
-    if "_next_view" in st.session_state:
-        next_view = st.session_state.pop("_next_view")
-        st.session_state["view"] = next_view
-        st.session_state["top_navigation"] = "Calls" if next_view == "Detail" else next_view
-    st.markdown('<div class="brand-row"><div class="brand">◈ Earnings Call Intelligence</div><div class="brand-meta">Offline research artifact · direction, evidence, reliability</div></div>', unsafe_allow_html=True)
-    view = st.session_state.get("view", "Home")
-    default_nav = "Calls" if view == "Detail" else view if view in {"Home", "Calls", "Reliability"} else "Home"
-    if "top_navigation" not in st.session_state:
-        st.session_state["top_navigation"] = default_nav
-    navigation = st.radio("Navigate", ["Home", "Calls", "Reliability"], horizontal=True, key="top_navigation", label_visibility="collapsed")
-    if view != "Detail" or navigation != "Calls":
-        view = navigation
-        st.session_state["view"] = view
+    if "_next_mockup_view" in st.session_state:
+        st.session_state["mockup_view"] = st.session_state.pop("_next_mockup_view")
+    if "mockup_view" not in st.session_state:
+        st.session_state["mockup_view"] = "Overview"
 
-    if view == "Home":
-        _render_home(active_bundle)
-    elif view == "Calls":
-        _render_calls(active_bundle, bundles)
-    elif view == "Reliability":
-        _render_reliability()
+    walk_forward_auc = _bundle_metric(active_bundle, "walk_forward_aggregate", "auc")
+    topbar_metric_label = "Walk-forward AUC"
+    if walk_forward_auc is None:
+        walk_forward_auc = _bundle_metric(active_bundle, "final_holdout", "auc")
+        topbar_metric_label = "Latest holdout AUC"
+    st.markdown(
+        '<div class="topbar-shell"><div class="brand-row">'
+        '<span class="brand-mark">EC</span>'
+        '<span class="brand-title">Earnings Call Intelligence</span>'
+        '<span class="brand-badge">research prototype</span>'
+        '<span class="brand-meta">direction · evidence · reliability</span>'
+        '</div></div>',
+        unsafe_allow_html=True,
+    )
+    nav_col, model_col, status_col = st.columns([5.6, 2.8, 1.8], vertical_alignment="center")
+    with nav_col:
+        navigation = st.radio(
+            "Navigate",
+            ["Overview", "Screener & Signals", "Call Detail Terminal", "Model Reliability & Lineage"],
+            horizontal=True,
+            key="mockup_view",
+            label_visibility="collapsed",
+        )
+    with model_col:
+        selected_model_label = st.selectbox(
+            "Active model",
+            labels,
+            key="active_model_label",
+            label_visibility="collapsed",
+            help="This model controls the probabilities, provenance labels, and feature values shown throughout the app.",
+        )
+    with status_col:
+        auc_text = _metric_text(pd.Series({"auc": walk_forward_auc}), "auc")
+        st.markdown(f'<div class="model-status"><span>{_escape(topbar_metric_label)}</span><strong>{auc_text}</strong></div>', unsafe_allow_html=True)
+
+    active_bundle = label_to_bundle[selected_model_label]
+    active_table = _prepare_table(active_bundle)
+    _render_ticker(active_table)
+
+    if navigation == "Overview":
+        _render_mockup_overview(active_bundle, active_table)
+    elif navigation == "Screener & Signals":
+        _render_mockup_screener(active_bundle, bundles, active_table)
+    elif navigation == "Call Detail Terminal":
+        _render_mockup_detail(bundles, active_bundle, active_table)
     else:
-        _render_call_detail(bundles, label_to_bundle, labels)
+        _render_reliability()
 
 
 if __name__ == "__main__":
