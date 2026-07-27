@@ -389,8 +389,8 @@ def _signal(probability: float | None, center: float, threshold: float | None = 
         return "Unavailable", "neutral", "This call does not have a usable model score."
     decision_threshold = center if threshold is None else threshold
     if probability >= decision_threshold:
-        return "Positive", "positive", "The model probability is above its binary decision threshold; confidence reflects its distance from the typical positive-return rate."
-    return "Negative", "negative", "The model probability is below its binary decision threshold; confidence reflects its distance from the typical positive-return rate."
+        return "Positive", "positive", "The model probability is above its binary decision threshold; signal strength reflects its distance from the typical positive-outcome rate."
+    return "Negative", "negative", "The model probability is below its binary decision threshold; signal strength reflects its distance from the typical positive-outcome rate."
 
 
 def _conviction(probability: float | None, center: float) -> str:
@@ -535,7 +535,7 @@ def _evidence_sections(row: pd.Series) -> list[tuple[str, str, str, list[str]]]:
     if momentum is None and volatility is None and beta is None:
         market_copy = "Market context is not available in this artifact."
     else:
-        market_copy = "Recent market behavior is included as context, not as a price forecast."
+        market_copy = "Recent market variables are model inputs, not a price forecast."
 
     return [
         (
@@ -551,10 +551,10 @@ def _evidence_sections(row: pd.Series) -> list[tuple[str, str, str, list[str]]]:
             [f"Q&A sentiment: {_format_number(qa)}", f"Presentation/Q&A gap: {_format_number(qa_gap)}", f"Sentiment slope: {_format_number(qa_slope)}"],
         ),
         (
-            "Market context",
+            "Market context inputs",
             market_copy,
-            "Recent market conditions that help contextualize the language signal.",
-            [f"20-day momentum: {_format_percent(momentum, signed=True)}", f"20-day volatility: {_format_percent(volatility)}", f"Beta: {_format_number(beta)}"],
+            "The model receives recent market behavior alongside transcript features.",
+            [f"20-day momentum: {_format_percent(momentum, signed=True)} — stock return over the prior 20 trading sessions", f"20-day volatility: {_format_percent(volatility)} — typical daily movement over the prior 20 sessions", f"Beta: {_format_number(beta)} — historical sensitivity to the market benchmark"],
         ),
     ]
 

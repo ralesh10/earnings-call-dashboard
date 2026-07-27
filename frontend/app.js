@@ -3,6 +3,8 @@ const state = {
   activeModel: null,
   currentCall: null,
   filters: { dir: 'ALL', conf: 'ALL', status: 'VALIDATED' },
+  filtersByModel: {},
+  sort: { key: 'datetime', direction: 'desc' },
   page: 1,
   pageSize: 20,
 };
@@ -32,6 +34,19 @@ function formatPoints(value, signed = false) {
 
 function formatMetric(value) {
   return value === null || value === undefined ? '—' : Number(value).toFixed(3);
+}
+
+function defaultFiltersFor(modelKey) {
+  return {
+    dir: 'ALL',
+    conf: 'ALL',
+    status: modelKey === 'finbert' ? 'EXPLORATORY' : 'VALIDATED',
+  };
+}
+
+function useModelFilters(modelKey) {
+  if (!state.filtersByModel[modelKey]) state.filtersByModel[modelKey] = defaultFiltersFor(modelKey);
+  state.filters = state.filtersByModel[modelKey];
 }
 
 function activeModelMeta() {
@@ -78,7 +93,7 @@ function directionLabel(model) {
 function confidenceBadge(model) {
   if (!model || !model.confidence || model.confidence === 'UNAVAILABLE') return '<span class="badge muted">Unavailable</span>';
   const level = String(model.confidence).toLowerCase();
-  return `<span class="badge confidence-${escapeHtml(level)}" title="${escapeHtml(model.confidenceDescription || 'Confidence is measured against the active model base rate.')}">${escapeHtml(level)} confidence</span>`;
+  return `<span class="badge confidence-${escapeHtml(level)}" title="${escapeHtml(model.signalStrengthDescription || model.confidenceDescription || 'Signal strength is measured against the active model base rate.')}">${escapeHtml(level)} signal strength</span>`;
 }
 
 function signalBadge(model) {
@@ -87,7 +102,7 @@ function signalBadge(model) {
   const label = model.tone === 'positive' ? '▲ Positive prediction' : '▼ Negative prediction';
   const baseRelation = model.baseRateRelation || (Number(model.prob) >= Number(model.baseRate) ? 'Above base rate' : 'Below base rate');
   const threshold = model.predictionThreshold === null || model.predictionThreshold === undefined ? 'Unavailable' : formatPercent(model.predictionThreshold);
-  const context = `Model probability ${formatPercent(model.prob)}; binary decision threshold ${threshold}; ${baseRelation}; typical positive-return rate ${formatPercent(model.baseRate)}; difference ${formatPoints(model.differenceFromBaseRate, true)}. ${model.confidenceDescription || model.explanation}`;
+  const context = `Model probability ${formatPercent(model.prob)}; binary decision threshold ${threshold}; ${baseRelation}; typical positive-outcome rate ${formatPercent(model.baseRate)}; difference ${formatPoints(model.differenceFromBaseRate, true)}. ${model.signalStrengthDescription || model.confidenceDescription || model.explanation}`;
   return `<span class="badge ${className}" title="${escapeHtml(context)}">${label} · ${formatPercent(model.prob)}</span>`;
 }
 
@@ -131,7 +146,7 @@ function updateModelStatus() {
 
 function onModelChange() {
   state.activeModel = $('globalModelSelect').value;
-  state.filters.status = state.activeModel === 'finbert' ? 'EXPLORATORY' : 'VALIDATED';
+  useModelFilters(state.activeModel);
   state.page = 1;
   updateModelStatus();
   updateFilterUI();
@@ -145,8 +160,65 @@ function onModelChange() {
 
 function setFilter(type, value, button) {
   state.filters[type] = value;
+  state.filtersByModel[state.activeModel] = state.filters;
   state.page = 1;
   updateFilterUI();
+  renderScreener();
+}
+
+function sortValue(call, key) {
+  const model = modelFor(call);
+  if (key === 'company') return call.sym || call.co || null;
+  if (key === 'datetime') return call.datetime || null;
+  if (key === 'status') return statusCategory(model?.status);
+  if (key === 'direction') return model?.signal || null;
+  if (key === 'strength') return model?.confidence || null;
+  if (key === 'probability') return model?.prob;
+  if (key === 'actualReturn') return call.ret;
+  return null;
+}
+
+function sortRank(key, value) {
+  if (value === null || value === undefined || value === '') return null;
+  const ranks = {
+    status: { VALIDATED: 0, EXPLORATORY: 1, UNAVAILABLE: 2 },
+    direction: { Positive: 0, Negative: 1, Unavailable: 2 },
+    strength: { LOW: 0, MEDIUM: 1, HIGH: 2, UNAVAILABLE: 3 },
+  };
+  return ranks[key]?.[value] ?? null;
+}
+
+function sortedCalls(calls) {
+  const { key, direction } = state.sort;
+  const multiplier = direction === 'asc' ? 1 : -1;
+  return [...calls].sort((left, right) => {
+    const leftValue = sortValue(left, key);
+    const rightValue = sortValue(right, key);
+    const leftMissing = leftValue === null || leftValue === undefined || leftValue === '';
+    const rightMissing = rightValue === null || rightValue === undefined || rightValue === '';
+    if (leftMissing !== rightMissing) return leftMissing ? 1 : -1;
+    if (leftMissing && rightMissing) return String(right.datetime || '').localeCompare(String(left.datetime || ''));
+    let comparison = 0;
+    const leftRank = sortRank(key, leftValue);
+    const rightRank = sortRank(key, rightValue);
+    if (leftRank !== null || rightRank !== null) comparison = (leftRank ?? 99) - (rightRank ?? 99);
+    else if (key === 'datetime') comparison = String(leftValue).localeCompare(String(rightValue));
+    else if (typeof leftValue === 'number' || typeof rightValue === 'number') comparison = Number(leftValue) - Number(rightValue);
+    else comparison = String(leftValue).localeCompare(String(rightValue));
+    if (comparison === 0) comparison = String(right.datetime || '').localeCompare(String(left.datetime || ''));
+    if (comparison === 0) comparison = String(left.sym || '').localeCompare(String(right.sym || ''));
+    return comparison * multiplier;
+  });
+}
+
+function setSort(key) {
+  if (state.sort.key === key) state.sort.direction = state.sort.direction === 'asc' ? 'desc' : 'asc';
+  else {
+    state.sort.key = key;
+    state.sort.direction = key === 'datetime' ? 'desc' : 'asc';
+  }
+  state.page = 1;
+  updateSortUI();
   renderScreener();
 }
 
@@ -224,14 +296,14 @@ function filteredCalls() {
     const matchesDirection = state.filters.dir === 'ALL'
       || (state.filters.dir === 'UP' && model?.signal === 'Positive')
       || (state.filters.dir === 'DOWN' && model?.signal === 'Negative');
-    const matchesConfidence = state.filters.conf === 'ALL' || model?.confidence === state.filters.conf;
+    const matchesConfidence = state.filters.conf === 'ALL' || (model?.signalStrength || model?.confidence) === state.filters.conf;
     return matchesSearch && matchesStatus && matchesDirection && matchesConfidence;
   });
 }
 
 function renderScreener() {
   if (!state.data) return;
-  const calls = filteredCalls();
+  const calls = sortedCalls(filteredCalls());
   const pageCount = Math.max(1, Math.ceil(calls.length / state.pageSize));
   state.page = Math.min(state.page, pageCount);
   const visible = calls.slice((state.page - 1) * state.pageSize, state.page * state.pageSize);
@@ -257,6 +329,7 @@ function renderScreener() {
     });
   });
   $('screenerCount').innerText = `Showing ${visible.length} of ${calls.length} matching calls`;
+  updateSortUI();
   $('screenerPagination').innerHTML = `
     <button class="btn" ${state.page <= 1 ? 'disabled' : ''} id="screenerPrev">← Previous</button>
     <span>Page ${state.page} of ${pageCount}</span>
@@ -306,12 +379,19 @@ function loadDetail(symbol, yearQuarter) {
 function renderFeatureBars(model) {
   if (!model || model.prob === null) return '<div style="padding:24px;background:var(--surface-raised);border:1px dashed var(--border);border-radius:6px;color:var(--muted);">Feature evidence is unavailable because this call has no usable prediction in the active model.</div>';
   if (!model.featureBars?.length) return '<div style="padding:24px;background:var(--surface-raised);border:1px dashed var(--border);border-radius:6px;color:var(--muted);">Human-readable feature evidence is not stored for this artifact.</div>';
-  return model.featureBars.map((feature) => `
+  const bars = model.featureBars.map((feature) => `
     <div class="f-bar-wrap">
-      <span style="width:180px;font-size:12.5px;">${escapeHtml(feature.label)} <span class="infoicon">i<span class="tip">${escapeHtml(feature.description)}</span></span></span>
+      <span style="width:180px;font-size:12.5px;">${escapeHtml(feature.label)} <span class="infoicon" tabindex="0">i<span class="tip">${escapeHtml(feature.description)} ${escapeHtml(feature.unitDescription || '')}</span></span></span>
       <div class="f-bar-track"><div class="f-bar-fill" style="width:${feature.width}%;background:var(--${escapeHtml(feature.color)});"></div></div>
       <span class="f-bar-val text-${escapeHtml(feature.color)}">${escapeHtml(feature.display)}</span>
     </div>`).join('');
+  const groups = (model.featureGroups || []).map((group) => `
+    <details class="feature-group-details">
+      <summary>${escapeHtml(group.title)} <span>${escapeHtml(group.summary || '')}</span></summary>
+      <p>${escapeHtml(group.description || '')}</p>
+      ${(group.details || []).map((detail) => `<div>${escapeHtml(detail)}</div>`).join('')}
+    </details>`).join('');
+  return `${bars}${groups}`;
 }
 
 function renderDetailView() {
@@ -349,12 +429,12 @@ function renderDetailView() {
     gaugeFill.style.borderColor = 'var(--muted-dim)';
     probText.innerText = 'N/A';
     probText.style.color = 'var(--muted)';
-    dirText.innerText = 'No clear signal';
-    $('gaugeContext').innerText = 'Base rate: unavailable · Difference: unavailable';
+    dirText.innerText = 'Unavailable';
+    $('gaugeContext').innerText = 'Threshold: unavailable · Typical rate: unavailable · Difference: unavailable';
     confBadge.className = 'badge muted';
     confBadge.innerText = 'UNAVAILABLE';
-    confBadge.title = 'Confidence is unavailable because no probability was produced.';
-    $('gaugeConfidenceNote').innerText = 'Confidence compares the model probability with the active model’s typical positive-return rate.';
+    confBadge.title = 'Signal strength is unavailable because no probability was produced.';
+    $('gaugeConfidenceNote').innerText = 'Signal strength compares the model probability with the active model’s typical positive-outcome rate.';
   } else {
     const isPositive = model.tone === 'positive';
     const color = isPositive ? 'var(--up)' : model.tone === 'negative' ? 'var(--down)' : 'var(--neutral)';
@@ -364,11 +444,12 @@ function renderDetailView() {
     probText.style.color = color;
     dirText.innerText = directionLabel(model);
     const threshold = model.predictionThreshold === null || model.predictionThreshold === undefined ? 'Unavailable' : formatPercent(model.predictionThreshold);
-    $('gaugeContext').innerText = `Threshold: ${threshold} · Base rate: ${formatPercent(model.baseRate)} · Difference: ${formatPoints(model.differenceFromBaseRate, true)}`;
+    $('gaugeContext').innerText = `Threshold: ${threshold} · Typical rate: ${formatPercent(model.baseRate)} · Difference: ${formatPoints(model.differenceFromBaseRate, true)}`;
+    $('gaugeContext').title = model.baseRateDefinition || 'Typical rate is the dataset-level positive-outcome rate for the active artifact, not a rolling company sentiment average.';
     confBadge.className = `badge confidence-${String(model.confidence || 'unavailable').toLowerCase()}`;
-    confBadge.innerText = `${model.confidence} CONFIDENCE`;
-    confBadge.title = model.confidenceDescription || 'Confidence compares distance from the active model’s base rate.';
-    $('gaugeConfidenceNote').innerText = model.confidenceDescription || 'Confidence compares the model probability with the active model’s typical positive-return rate.';
+    confBadge.innerText = `${model.confidence || 'UNAVAILABLE'} SIGNAL STRENGTH`;
+    confBadge.title = model.signalStrengthDescription || model.confidenceDescription || 'Signal strength compares distance from the active model’s base rate.';
+    $('gaugeConfidenceNote').innerText = model.signalStrengthDescription || model.confidenceDescription || 'Signal strength compares the model probability with the active model’s typical positive-outcome rate.';
   }
   $('featureContainer').innerHTML = renderFeatureBars(model);
   drawEventWindowChart(call);
@@ -509,33 +590,91 @@ function drawEventWindowChart(call) {
 function renderReliability() {
   if (!state.data) return;
   const models = state.data.reliability.models;
-  const rich = models.find((model) => model.key === 'sentence_plus_historical_xgboost_depth1_trees100');
-  const original = models.find((model) => model.key === 'original_logistic');
-  $('relPrimaryTitle').innerHTML = `${escapeHtml(rich?.title || 'Rich XGBoost')} <span class="badge gold">${state.activeModel === 'sentence_hist' ? 'Selected Model' : 'Richer candidate'}</span>`;
-  $('relFinbertTitle').innerHTML = `${escapeHtml(original?.title || 'Original Logistic')} <span class="badge muted">${state.activeModel === 'finbert' ? 'Selected Model' : 'Reference'}</span>`;
-  $('relPrimarySummary').innerText = `Walk-forward AUC ${formatMetric(rich?.walkForwardAuc)} · latest holdout ${formatMetric(rich?.holdoutAuc)} · Brier ${formatMetric(rich?.walkForwardBrier)}.`;
-  $('relFinbertSummary').innerText = `Walk-forward AUC ${formatMetric(original?.walkForwardAuc)} · latest holdout ${formatMetric(original?.holdoutAuc)} · Brier ${formatMetric(original?.walkForwardBrier)}.`;
-  $('relCardPrimary').classList.toggle('primary', state.activeModel === 'sentence_hist');
-  $('relCardFinbert').classList.toggle('primary', state.activeModel === 'finbert');
+  const activeKey = reliabilityKey();
+  const formatDetail = (value) => value === null || value === undefined ? '—' : Number(value).toFixed(3);
+  const bestKey = (split, metric, lowerIsBetter = false) => {
+    const available = models.filter((model) => model[split]?.[metric] !== null && model[split]?.[metric] !== undefined);
+    if (!available.length) return null;
+    return available.reduce((best, model) => {
+      if (!best) return model;
+      const current = Number(model[split][metric]);
+      const previous = Number(best[split][metric]);
+      return lowerIsBetter ? (current < previous ? model : best) : (current > previous ? model : best);
+    }, null)?.key;
+  };
+  const winnerClass = (model, split, metric, lowerIsBetter = false) => bestKey(split, metric, lowerIsBetter) === model.key ? 'metric-winner' : '';
+  const cards = $('reliabilityCards');
+  if (cards) {
+    cards.innerHTML = models.slice(0, 3).map((model) => `
+      <article class="model-card ${model.key === activeKey ? 'primary' : ''}">
+        <div class="eyebrow">${escapeHtml(model.badge || 'Stored comparison')}</div>
+        <h4>${escapeHtml(model.title)} ${model.key === activeKey ? '<span class="badge gold">Selected Model</span>' : ''}</h4>
+        <p style="color:var(--muted);font-size:12.5px;margin-bottom:12px;">${escapeHtml(model.description || '')}</p>
+        <div class="reliability-card-grid">
+          <span>Walk-forward AUC <strong>${formatDetail(model.walkForwardAuc)}</strong></span>
+          <span>Latest holdout <strong>${formatDetail(model.holdoutAuc)}</strong></span>
+          <span>Brier score <strong>${formatDetail(model.walkForwardBrier)}</strong></span>
+          <span>Events / companies <strong>${model.events == null ? '—' : Number(model.events).toLocaleString()} / ${model.companyCount == null ? '—' : Number(model.companyCount).toLocaleString()}</strong></span>
+        </div>
+      </article>`).join('');
+  }
   $('reliabilityBody').innerHTML = models.map((model) => `<tr class="${(state.activeModel === 'sentence_hist' && model.key === 'sentence_plus_historical_xgboost_depth1_trees100') || (state.activeModel === 'finbert' && model.key === 'original_logistic') ? 'highlight' : ''}">
-    <td>${escapeHtml(model.title)}</td><td>${escapeHtml(model.badge)}</td><td>${formatMetric(model.walkForwardAuc)}</td><td>${formatMetric(model.holdoutAuc)}</td><td>${formatMetric(model.walkForwardBrier)}</td><td>${model.events === null || model.events === undefined ? '—' : Number(model.events).toLocaleString()}</td>
+    <td>${escapeHtml(model.title)}</td><td>${escapeHtml(model.badge)}</td><td class="${winnerClass(model, 'walkForward', 'auc')}">${formatMetric(model.walkForwardAuc)}</td><td class="${winnerClass(model, 'holdout', 'auc')}">${formatMetric(model.holdoutAuc)}</td><td class="${winnerClass(model, 'walkForward', 'brier', true)}">${formatMetric(model.walkForwardBrier)}</td><td>${model.events === null || model.events === undefined ? '—' : Number(model.events).toLocaleString()}</td>
   </tr>`).join('');
+  const detail = $('reliabilityDetailBody');
+  if (detail) {
+    detail.innerHTML = models.map((model) => {
+      const walk = model.walkForward || {};
+      const holdout = model.holdout || {};
+      const cell = (value, className = '') => `<td class="${className}">${value === null || value === undefined ? '—' : Number(value).toFixed(3)}</td>`;
+      const row = (split, values) => `<tr><td>${escapeHtml(model.title)}</td><td>${split}</td><td>${values.events == null ? '—' : Number(values.events).toLocaleString()}</td>${cell(values.accuracy, winnerClass(model, split === 'Walk-forward' ? 'walkForward' : 'holdout', 'accuracy'))}${cell(values.balancedAccuracy, winnerClass(model, split === 'Walk-forward' ? 'walkForward' : 'holdout', 'balancedAccuracy'))}${cell(values.precision, winnerClass(model, split === 'Walk-forward' ? 'walkForward' : 'holdout', 'precision'))}${cell(values.recall, winnerClass(model, split === 'Walk-forward' ? 'walkForward' : 'holdout', 'recall'))}${cell(values.f1, winnerClass(model, split === 'Walk-forward' ? 'walkForward' : 'holdout', 'f1'))}${cell(values.mcc, winnerClass(model, split === 'Walk-forward' ? 'walkForward' : 'holdout', 'mcc'))}${cell(values.brier, winnerClass(model, split === 'Walk-forward' ? 'walkForward' : 'holdout', 'brier', true))}${cell(values.logLoss, winnerClass(model, split === 'Walk-forward' ? 'walkForward' : 'holdout', 'logLoss', true))}${cell(values.averagePrecision, winnerClass(model, split === 'Walk-forward' ? 'walkForward' : 'holdout', 'averagePrecision'))}<td>${values.trueNegative == null ? '—' : `${values.trueNegative}/${values.falsePositive}/${values.falseNegative}/${values.truePositive}`}</td></tr>`;
+      return `${row('Walk-forward', walk)}${row('Holdout', holdout)}`;
+    }).join('');
+  }
+  const methodology = $('reliabilityMethodology');
+  if (methodology) {
+    const manifest = state.data.reliability.manifest || {};
+    const years = Array.isArray(manifest.walk_forward_years) ? manifest.walk_forward_years.join(', ') : 'Unavailable';
+    methodology.innerText = `Walk-forward years: ${years} · Holdout cutoff: ${manifest.holdout_cutoff_year ?? 'Unavailable'}`;
+  }
+  const chart = $('reliabilityChart');
+  if (chart) {
+    chart.innerHTML = models.map((model) => {
+      const walk = Number(model.walkForwardAuc);
+      const holdout = Number(model.holdoutAuc);
+      const walkPos = Number.isFinite(walk) ? Math.max(0, Math.min(100, walk * 100)) : null;
+      const holdoutPos = Number.isFinite(holdout) ? Math.max(0, Math.min(100, holdout * 100)) : null;
+      const walkBest = bestKey('walkForward', 'auc') === model.key;
+      const holdoutBest = bestKey('holdout', 'auc') === model.key;
+      return `<div class="reliability-row"><div class="reliability-row-label">${escapeHtml(model.title)}</div><div class="reliability-track" aria-label="${escapeHtml(model.title)} AUC comparison"><span class="reliability-baseline" style="left:50%"></span>${walkPos === null ? '' : `<span class="reliability-dot walk ${walkBest ? 'best' : ''}" style="left:${walkPos}%" title="Walk-forward AUC ${formatMetric(walk)}${walkBest ? ' · Best' : ''}"></span>`}${holdoutPos === null ? '' : `<span class="reliability-dot holdout ${holdoutBest ? 'best' : ''}" style="left:${holdoutPos}%" title="Holdout AUC ${formatMetric(holdout)}${holdoutBest ? ' · Best' : ''}"></span>`}</div><div class="reliability-row-values">WF ${formatMetric(model.walkForwardAuc)} · HO ${formatMetric(model.holdoutAuc)}</div></div>`;
+    }).join('');
+  }
 }
 
 function bindSearch() {
+  if ($('screenerSearch').dataset.bound === 'true') return;
+  $('screenerSearch').dataset.bound = 'true';
   $('screenerSearch').addEventListener('input', () => { state.page = 1; renderScreener(); });
 }
 
 function bindFilters() {
-  // Use one delegated listener so the controls remain interactive even if the
-  // data request is still loading or a later render replaces their container.
-  if (document.body.dataset.filtersBound === 'true') return;
-  document.body.dataset.filtersBound = 'true';
-  document.addEventListener('click', (event) => {
-    const button = event.target.closest?.('[data-filter-type]');
-    if (!button) return;
-    event.preventDefault();
-    setFilter(button.dataset.filterType, button.dataset.filterValue, button);
+  document.querySelectorAll('[data-filter-type]').forEach((button) => {
+    button.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setFilter(button.dataset.filterType, button.dataset.filterValue, button);
+    };
+  });
+}
+
+function bindSortControls() {
+  document.querySelectorAll('[data-sort-key]').forEach((button) => {
+    if (button.dataset.bound === 'true') return;
+    button.dataset.bound = 'true';
+    button.addEventListener('click', () => setSort(button.dataset.sortKey));
+    button.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSort(button.dataset.sortKey); }
+    });
   });
 }
 
@@ -545,9 +684,13 @@ async function boot() {
     if (!response.ok) throw new Error(`Data request failed: ${response.status}`);
     state.data = await response.json();
     state.activeModel = state.data.defaultModel || state.data.models[0]?.key;
+    useModelFilters(state.activeModel);
+    const buildInfo = $('dataBuildInfo');
+    if (buildInfo) buildInfo.innerText = `Artifact export v${state.data.version || '—'} · ${state.data.generatedAt || 'timestamp unavailable'}`;
     populateModelSelector();
     bindSearch();
     bindFilters();
+    bindSortControls();
     updateModelStatus();
     buildTickerTape();
     updateFilterUI();
@@ -568,6 +711,17 @@ function updateFilterUI() {
   });
 }
 
+function updateSortUI() {
+  document.querySelectorAll('[data-sort-key]').forEach((button) => {
+    const active = button.dataset.sortKey === state.sort.key;
+    const sortValue = active ? (state.sort.direction === 'asc' ? 'ascending' : 'descending') : 'none';
+    button.setAttribute('aria-sort', sortValue);
+    button.parentElement?.setAttribute('aria-sort', sortValue);
+    const label = button.dataset.label || button.innerText.replace(/[↕↑↓]/g, '').trim();
+    button.innerHTML = `${escapeHtml(label)}${active ? (state.sort.direction === 'asc' ? ' ↑' : ' ↓') : ' ↕'}`;
+  });
+}
+
 window.switchTab = switchTab;
 window.setFilter = (type, value, button) => { setFilter(type, value, button); };
 window.onModelChange = onModelChange;
@@ -576,4 +730,5 @@ window.loadDetail = loadDetail;
 // Bind before the data request starts so the controls never appear clickable
 // without responding to input.
 bindFilters();
+bindSortControls();
 document.addEventListener('DOMContentLoaded', boot);

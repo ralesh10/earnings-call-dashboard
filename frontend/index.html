@@ -203,6 +203,34 @@ Failed to create stream fd: Operation not permitted
   }
   .pill:hover { color: var(--text); }
   .pill.active { background: var(--gold-soft); color: var(--gold); font-weight: 600; }
+  .sort-button { display: inline-flex; align-items: center; gap: 3px; background: none; border: 0; color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit; padding: 0; cursor: pointer; }
+  .sort-button:hover, .sort-button:focus-visible { color: var(--text); }
+  .sort-button[aria-sort="ascending"], .sort-button[aria-sort="descending"] { color: var(--gold); }
+  .filter-summary { display:flex; align-items:center; gap:10px; flex-wrap:wrap; color:var(--muted); font:11px var(--font-mono); }
+  .feature-group-details { border-top:1px solid var(--border-soft); padding-top:10px; color:var(--muted); font-size:12px; line-height:1.45; }
+  .feature-group-details summary { cursor:pointer; color:var(--text); font-weight:600; }
+  .feature-group-details summary span { color:var(--muted); font-weight:400; margin-left:8px; }
+  .reliability-card-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; font:11px var(--font-mono); color:var(--muted); }
+  .reliability-card-grid strong { display:block; color:var(--text); font-size:14px; margin-top:2px; }
+  .reliability-chart { display:flex; flex-direction:column; gap:12px; }
+  .reliability-row { display:grid; grid-template-columns:150px 1fr 150px; gap:12px; align-items:center; font:11px var(--font-mono); }
+  .reliability-row-label { color:var(--text); }
+  .reliability-track { position:relative; height:20px; border-top:1px solid var(--border-focus); background:linear-gradient(90deg, transparent 49.8%, var(--border-focus) 50%, transparent 50.2%); }
+  .reliability-baseline { position:absolute; top:-5px; height:30px; border-left:1px dashed var(--muted-dim); }
+  .reliability-dot { position:absolute; top:5px; width:10px; height:10px; border-radius:50%; transform:translateX(-50%); border:2px solid var(--surface); }
+  .reliability-dot.walk { background:var(--gold); }
+  .reliability-dot.holdout { background:var(--neutral); }
+  .reliability-dot.best { box-shadow:0 0 0 3px rgba(245,176,65,.35); }
+  .reliability-row-values { color:var(--muted); text-align:right; }
+  .subrow td { color:var(--muted); border-top:0; }
+  .metric-winner { background: rgba(245,176,65,.12); color: var(--text); font-weight:700; }
+  .metric-winner::after { content:' Best'; color:var(--gold); font-size:9px; text-transform:uppercase; }
+  .metric-guide-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-top:12px; }
+  .metric-guide-item { background:var(--surface-raised); border:1px solid var(--border-soft); border-radius:6px; padding:10px; font-size:11px; line-height:1.4; }
+  .metric-guide-item strong { display:block; color:var(--text); font-family:var(--font-mono); margin-bottom:3px; }
+  .metric-guide-item span { color:var(--muted); }
+  @media (max-width: 760px) { .metric-guide-grid { grid-template-columns:1fr; } }
+  @media (max-width: 760px) { .reliability-row { grid-template-columns:1fr; gap:4px; } .reliability-row-values { text-align:left; } }
   
   .search-input {
     background: var(--surface); border: 1px solid var(--border); color: var(--text);
@@ -403,7 +431,7 @@ Failed to create stream fd: Operation not permitted
       </div>
 
       <div class="card" id="spotlightCard">
-        <div class="eyebrow" style="color: var(--neutral);">High-Confidence Signal Spotlight</div>
+        <div class="eyebrow" style="color: var(--neutral);">High Signal-Strength Spotlight</div>
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 14px;">
           <div>
             <h3 id="spotlightCompany" style="font-size: 18px; font-family: var(--font-mono);">Loading signal…</h3>
@@ -480,27 +508,27 @@ Failed to create stream fd: Operation not permitted
         <div class="filter-group">
           <span class="filter-label">Signal Direction:</span>
           <div class="pill-group" id="filterDir">
-            <button type="button" class="pill active" data-filter-type="dir" data-filter-value="ALL">All Signals</button>
-            <button type="button" class="pill" data-filter-type="dir" data-filter-value="UP">▲ Positive predictions</button>
-            <button type="button" class="pill" data-filter-type="dir" data-filter-value="DOWN">▼ Negative predictions</button>
+            <button type="button" class="pill active" data-filter-type="dir" data-filter-value="ALL" onclick="window.setFilter('dir','ALL',this)">All Signals</button>
+            <button type="button" class="pill" data-filter-type="dir" data-filter-value="UP" onclick="window.setFilter('dir','UP',this)">▲ Positive predictions</button>
+            <button type="button" class="pill" data-filter-type="dir" data-filter-value="DOWN" onclick="window.setFilter('dir','DOWN',this)">▼ Negative predictions</button>
           </div>
         </div>
         <div class="filter-group">
-          <span class="filter-label">Confidence Band:</span>
+          <span class="filter-label">Signal Strength:</span>
           <div class="pill-group" id="filterConf">
-            <button type="button" class="pill active" data-filter-type="conf" data-filter-value="ALL">All</button>
-            <button type="button" class="pill" data-filter-type="conf" data-filter-value="HIGH">High</button>
-            <button type="button" class="pill" data-filter-type="conf" data-filter-value="MEDIUM">Medium</button>
-            <button type="button" class="pill" data-filter-type="conf" data-filter-value="LOW">Low</button>
+            <button type="button" class="pill active" data-filter-type="conf" data-filter-value="ALL" onclick="window.setFilter('conf','ALL',this)">All</button>
+            <button type="button" class="pill" data-filter-type="conf" data-filter-value="HIGH" onclick="window.setFilter('conf','HIGH',this)">High</button>
+            <button type="button" class="pill" data-filter-type="conf" data-filter-value="MEDIUM" onclick="window.setFilter('conf','MEDIUM',this)">Medium</button>
+            <button type="button" class="pill" data-filter-type="conf" data-filter-value="LOW" onclick="window.setFilter('conf','LOW',this)">Low</button>
           </div>
         </div>
         <div class="filter-group">
           <span class="filter-label">Coverage Status:</span>
           <div class="pill-group" id="filterStatus">
-            <button type="button" class="pill active" data-filter-type="status" data-filter-value="ALL">All</button>
-            <button type="button" class="pill" data-filter-type="status" data-filter-value="VALIDATED">Validated</button>
-            <button type="button" class="pill" data-filter-type="status" data-filter-value="EXPLORATORY">Exploratory</button>
-            <button type="button" class="pill" data-filter-type="status" data-filter-value="UNAVAILABLE">Unavailable</button>
+            <button type="button" class="pill active" data-filter-type="status" data-filter-value="ALL" onclick="window.setFilter('status','ALL',this)">All</button>
+            <button type="button" class="pill" data-filter-type="status" data-filter-value="VALIDATED" onclick="window.setFilter('status','VALIDATED',this)">Validated</button>
+            <button type="button" class="pill" data-filter-type="status" data-filter-value="EXPLORATORY" onclick="window.setFilter('status','EXPLORATORY',this)">Exploratory</button>
+            <button type="button" class="pill" data-filter-type="status" data-filter-value="UNAVAILABLE" onclick="window.setFilter('status','UNAVAILABLE',this)">Unavailable</button>
           </div>
         </div>
       </div>
@@ -512,19 +540,19 @@ Failed to create stream fd: Operation not permitted
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; font-size: 12px; color: var(--muted); font-family: var(--font-mono);">
       <span id="screenerCount">Showing 14 calls</span>
-      <span><span id="screenerActiveModelLabel">Model: Loading…</span> · <span id="screenerConfidenceGuide">Low &lt;5 pts · Medium 5–15 pts · High ≥15 pts from base rate</span></span>
+      <span id="screenerActiveModelLabel">Model: Loading…</span>
     </div>
 
     <div class="data-table-wrap">
       <table class="data-table" id="screenerTable">
         <thead>
           <tr>
-            <th>Company &amp; Ticker</th>
-            <th>Earnings Quarter</th>
-            <th>Dataset Status</th>
-            <th>Active Model Signal</th>
-            <th>Confidence <span class="infoicon">i<span class="tip">The model always makes a binary positive or negative prediction when a probability exists. Confidence is measured against the base rate: low is within 5 points, medium is 5–15 points, and high is at least 15 points away.</span></span></th>
-            <th>Actual 5D Return</th>
+            <th><button type="button" class="sort-button" data-sort-key="company" data-label="Company &amp; Ticker" aria-sort="none">Company &amp; Ticker ↕</button></th>
+            <th><button type="button" class="sort-button" data-sort-key="datetime" data-label="Earnings Quarter" aria-sort="descending">Earnings Quarter ↓</button></th>
+            <th><button type="button" class="sort-button" data-sort-key="status" data-label="Dataset Status" aria-sort="none">Dataset Status ↕</button></th>
+            <th><button type="button" class="sort-button" data-sort-key="probability" data-label="Active Model Signal" aria-sort="none">Active Model Signal ↕</button></th>
+            <th><button type="button" class="sort-button" data-sort-key="strength" data-label="Signal Strength" aria-sort="none">Signal Strength ↕</button> <span class="infoicon">i<span class="tip">Signal strength is measured by distance from the typical positive-outcome rate, not by distance from the 50% decision threshold.</span></span></th>
+            <th><button type="button" class="sort-button" data-sort-key="actualReturn" data-label="Actual 5D Return" aria-sort="none">Actual 5D Return ↕</button></th>
             <th>Action</th>
           </tr>
         </thead>
@@ -570,12 +598,12 @@ Failed to create stream fd: Operation not permitted
             <div class="gauge-fill" id="gaugeFill"></div>
           </div>
           <div class="gauge-val" id="gaugeProbText">68%</div>
-          <div class="gauge-sub" id="gaugeDirText">Above or below base rate</div>
-          <div id="gaugeContext" style="font-size:11px;color:var(--muted-dim);font-family:var(--font-mono);margin-top:8px;">Base rate: — · Difference: —</div>
+          <div class="gauge-sub" id="gaugeDirText">Positive or negative prediction</div>
+          <div id="gaugeContext" style="font-size:11px;color:var(--muted-dim);font-family:var(--font-mono);margin-top:8px;">Threshold: — · Typical rate: — · Difference: —</div>
           <div style="margin-top: 14px;">
             <span class="badge" id="gaugeConfBadge">HIGH CONFIDENCE</span>
           </div>
-          <div id="gaugeConfidenceNote" style="font-size:11px;color:var(--muted);line-height:1.45;margin-top:8px;">Confidence compares the model probability with the active model’s typical positive-return rate.</div>
+          <div id="gaugeConfidenceNote" style="font-size:11px;color:var(--muted);line-height:1.45;margin-top:8px;">Signal strength compares the model probability with the active model’s typical positive-outcome rate.</div>
         </div>
 
         <div class="card" style="padding: 16px;">
@@ -640,30 +668,15 @@ Failed to create stream fd: Operation not permitted
 
   <!-- ==================== RELIABILITY VIEW ==================== -->
   <section id="view-reliability" class="view">
-    <div class="grid-2" style="margin-bottom: 24px;">
-      <!-- FIXED: Added ID relCardPrimary for dynamic state syncing -->
-      <div id="relCardPrimary" class="model-card primary">
-        <div class="eyebrow">Primary Architecture (Active Preferred)</div>
-        <h4 id="relPrimaryTitle">Rich XGBoost <span class="badge gold">Selected Model</span></h4>
-        <p style="color: var(--muted); font-size: 12.5px; margin-bottom: 12px;">
-          Engineered to capture relative sentiment momentum by scoring sentence-level NLP features against each company's own historical baseline. 
-        </p>
-        <div style="font-size: 12px; font-family: var(--font-mono); color: var(--text); background: var(--surface-raised); padding: 10px; border-radius: 4px;">
-          <strong id="relPrimarySummary">Loading stored comparison metrics…</strong>
-        </div>
-      </div>
+    <div id="reliabilityCards" class="grid-3" style="margin-bottom: 24px;"></div>
 
-      <!-- FIXED: Added ID relCardFinbert for dynamic state syncing -->
-      <div id="relCardFinbert" class="model-card">
-        <div class="eyebrow">Baseline Comparison</div>
-        <h4 id="relFinbertTitle">Original Logistic <span class="badge muted">Original Model</span></h4>
-        <p style="color: var(--muted); font-size: 12.5px; margin-bottom: 12px;">
-          A smaller logistic sentiment model used as a reference against the richer language-and-history candidate.
-        </p>
-        <div style="font-size: 12px; font-family: var(--font-mono); color: var(--muted); background: var(--surface-raised); padding: 10px; border-radius: 4px;">
-          <strong id="relFinbertSummary">Loading stored comparison metrics…</strong>
-        </div>
+    <div class="card" style="margin-bottom:24px;">
+      <div class="section-header" style="margin-top:0;">
+        <h2>AUC comparison</h2>
+        <span class="sub">0.50 is the no-information reference line</span>
       </div>
+      <div id="reliabilityChart" class="reliability-chart" role="img" aria-label="AUC comparison across stored models"></div>
+      <div style="display:flex;gap:14px;color:var(--muted);font:11px var(--font-mono);margin-top:14px;"><span><i class="reliability-dot walk" style="display:inline-block;position:static;transform:none;"></i> Walk-forward</span><span><i class="reliability-dot holdout" style="display:inline-block;position:static;transform:none;"></i> Latest holdout</span></div>
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
@@ -671,6 +684,7 @@ Failed to create stream fd: Operation not permitted
         <h2>Comprehensive Evaluation Benchmark Suite</h2>
         <span class="sub">Rigorous comparison across all architectural iterations and baseline controls</span>
       </div>
+      <div id="reliabilityMethodology" style="color:var(--muted);font:11px/1.45 var(--font-mono);margin-bottom:12px;">Loading stored split methodology…</div>
 
       <table class="eval-table">
         <thead>
@@ -685,14 +699,37 @@ Failed to create stream fd: Operation not permitted
         </thead>
         <tbody id="reliabilityBody"><tr><td colspan="6">Loading stored comparison metrics…</td></tr></tbody>
       </table>
-      <div style="font-size: 11px; color: var(--muted); margin-top: 10px; font-family: var(--font-mono);">
-        Stored artifact values only. AUC is ranking quality; Brier score measures probability calibration. Differences are evidence, not a definitive winner.
-      </div>
+      <details class="metric-guide" style="margin-top:12px;">
+        <summary style="cursor:pointer;color:var(--muted);font:11px var(--font-mono);">Metric guide</summary>
+        <div class="metric-guide-grid">
+          <div class="metric-guide-item"><strong>AUC · higher is better</strong><span>How well the model ranks positive outcomes above negative outcomes. 0.50 is roughly no information.</span></div>
+          <div class="metric-guide-item"><strong>Brier · lower is better</strong><span>How closely predicted probabilities match eventual outcomes.</span></div>
+          <div class="metric-guide-item"><strong>Accuracy · higher is better</strong><span>Share of calls classified correctly at the decision threshold.</span></div>
+          <div class="metric-guide-item"><strong>Precision · higher is better</strong><span>Share of Positive predictions that were actually positive.</span></div>
+          <div class="metric-guide-item"><strong>Recall · higher is better</strong><span>Share of actual positive outcomes the model identified.</span></div>
+          <div class="metric-guide-item"><strong>MCC · higher is better</strong><span>Balanced binary-classification quality measure; 0 is roughly no correlation.</span></div>
+        </div>
+      </details>
     </div>
+
+    <details class="card" style="margin-bottom:24px;">
+      <summary style="cursor:pointer;font-weight:700;">Detailed classification metrics</summary>
+      <p style="color:var(--muted);font-size:12px;line-height:1.45;">Cells marked <span style="background:rgba(245,176,65,.12);color:var(--gold);padding:2px 5px;font-weight:700;">Best</span> are the strongest stored result for that metric and split. Values are not recomputed in the browser.</p>
+      <div class="data-table-wrap" style="overflow-x:auto;">
+        <table class="eval-table" style="min-width:1240px;">
+          <thead><tr><th>Model</th><th>Split</th><th>Events</th><th>Accuracy</th><th>Balanced acc.</th><th>Precision</th><th>Recall</th><th>F1</th><th>MCC</th><th>Brier</th><th>Log loss</th><th>Avg. precision</th><th>TN / FP / FN / TP</th></tr></thead>
+          <tbody id="reliabilityDetailBody"><tr><td colspan="13">Loading stored detailed metrics…</td></tr></tbody>
+        </table>
+      </div>
+    </details>
   </section>
 
 </main>
 
-<script src="app.js?v=3"></script>
+<footer style="max-width:1400px;margin:0 auto;padding:0 24px 24px;color:var(--muted-dim);font:10px var(--font-mono);text-align:right;">
+  <span id="dataBuildInfo">Artifact export: loading…</span>
+</footer>
+
+<script src="app.js?v=5"></script>
 </body>
 </html>

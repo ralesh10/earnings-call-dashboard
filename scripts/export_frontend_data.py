@@ -95,7 +95,7 @@ def _feature_bars(row: pd.Series) -> list[dict[str, Any]]:
         ("Q&A / presentation gap", ("qa_minus_pres_sent_mean", "sentiment_mismatch_pos"), "gold", "Difference between Q&A and prepared remarks, measured on the sentiment-score scale.", "score"),
         ("Q&A sentiment slope", ("qa_slope_z", "qa_slope"), "up", "Change in Q&A tone across the call; shown as a historical z-score when available.", "score"),
         ("Evasion index", ("evasion_index",), "neutral", "Bounded index from 0 to 1; higher values indicate more evasive language in the source artifact.", "index"),
-        ("Market momentum", ("momentum_20d", "momentum_5d"), "neutral", "Recent market movement used as context, shown as a percentage change.", "percent"),
+        ("Market momentum input", ("momentum_20d", "momentum_5d"), "neutral", "Model input: stock return over the prior 20 trading sessions. This is not a five-session forecast.", "percent"),
     ]
     bars: list[dict[str, Any]] = []
     for label, names, color, description, value_kind in candidates:
@@ -119,7 +119,23 @@ def _feature_bars(row: pd.Series) -> list[dict[str, Any]]:
         else:
             unit = "σ" if selected_name and selected_name.endswith("_z") else "score"
             display = _format_value(float(value), f" {unit}" if unit == "score" else unit)
-        bars.append({"label": label, "value": value, "display": display, "unit": unit, "color": color, "width": width, "description": description})
+        unit_description = {
+            "σ": "Standard deviations relative to the company’s historical language distribution.",
+            "score": "Sentiment score on the scale produced by the source artifact.",
+            "0–1": "Bounded index where higher values indicate more of the measured behavior.",
+            "%": "Percentage change from the source artifact.",
+        }[unit]
+        bars.append({
+            "label": label,
+            "value": value,
+            "display": display,
+            "unit": unit,
+            "unitDescription": unit_description,
+            "sourceFeature": selected_name,
+            "color": color,
+            "width": width,
+            "description": description,
+        })
     return bars[:4]
 
 
@@ -138,20 +154,21 @@ def _feature_groups(row: pd.Series) -> list[dict[str, Any]]:
 def _prediction_for(bundle: Any, row: pd.Series) -> dict[str, Any]:
     frame = row.to_frame().T
     probability, status, source = _predict(bundle, frame)
-    center = _base_rate(bundle) or float(bundle.schema.get("prediction_threshold", 0.5))
+    base_rate = _base_rate(bundle)
+    center = base_rate if base_rate is not None else float(bundle.schema.get("prediction_threshold", 0.5))
     threshold = float(bundle.schema.get("prediction_threshold", 0.5))
     signal, tone, explanation = _signal(probability, center, threshold)
     target = str(bundle.schema.get("target_column", "abnormal_return_5d"))
     actual = _number(row.get(target))
     difference = None if probability is None else probability - center
     confidence_description = (
-        "Low confidence: the model is within 5 percentage points of the typical positive-return rate."
+        "Low signal strength: the model is within 5 percentage points of the typical positive-outcome rate."
         if difference is not None and abs(difference) < .05 else
-        "Medium confidence: the model is 5–15 percentage points from the typical positive-return rate."
+        "Medium signal strength: the model is 5–15 percentage points from the typical positive-outcome rate."
         if difference is not None and abs(difference) < .15 else
-        "High confidence: the model is at least 15 percentage points from the typical positive-return rate."
+        "High signal strength: the model is at least 15 percentage points from the typical positive-outcome rate."
         if difference is not None else
-        "Confidence is unavailable because no probability was produced."
+        "Signal strength is unavailable because no probability was produced."
     )
     return {
         "prob": probability,
@@ -170,9 +187,12 @@ def _prediction_for(bundle: Any, row: pd.Series) -> dict[str, Any]:
         "tone": tone,
         "explanation": explanation,
         "confidence": _conviction(probability, center).upper(),
+        "signalStrength": _conviction(probability, center).upper(),
         "baseRate": center,
+        "baseRateDefinition": "Dataset-level positive-outcome rate for the active artifact; it is not a rolling company sentiment average.",
         "differenceFromBaseRate": difference,
         "confidenceDescription": confidence_description,
+        "signalStrengthDescription": confidence_description,
         "statusCategory": "Validated" if status in VALIDATED_STATUSES else "Exploratory" if status == "Retrospective inference" else "Unavailable",
         "actualReturn": actual,
         "featureBars": _feature_bars(row),
@@ -221,6 +241,45 @@ def _metric_record(metrics: pd.DataFrame | None, model: str, title: str, descrip
     def value(row: pd.Series | None, name: str) -> Any:
         return _number(row.get(name)) if row is not None else None
 
+    def first_value(row: pd.Series | None, *names: str) -> Any:
+        for name in names:
+            result = value(row, name)
+            if result is not None:
+                return result
+        return None
+
+    def metric_group(row: pd.Series | None) -> dict[str, Any]:
+        if row is None:
+            return {}
+        return {
+            "events": value(row, "n"),
+            "accuracy": value(row, "accuracy"),
+            "balancedAccuracy": value(row, "balanced_accuracy"),
+            "precision": value(row, "precision"),
+            "recall": value(row, "recall"),
+            "f1": value(row, "f1"),
+            "mcc": value(row, "mcc"),
+            "auc": value(row, "auc"),
+            "brier": value(row, "brier"),
+            "logLoss": value(row, "log_loss"),
+            "averagePrecision": value(row, "average_precision"),
+            "positiveRate": value(row, "positive_rate"),
+            "trueNegative": value(row, "tn"),
+            "falsePositive": value(row, "fp"),
+            "falseNegative": value(row, "fn"),
+            "truePositive": value(row, "tp"),
+            "confidenceInterval": {
+                "lower": first_value(row, "auc_ci_lower_95", "auc_lower_95"),
+                "upper": first_value(row, "auc_ci_upper_95", "auc_upper_95"),
+            },
+            "splitRule": _text(row.get("train_rule")),
+        }
+
+    manifest = _load_comparison_manifest()
+    walk_group = metric_group(walk)
+    holdout_group = metric_group(holdout)
+    walk_ci = walk_group.get("confidenceInterval", {})
+
     return {
         "key": model,
         "title": title,
@@ -230,11 +289,18 @@ def _metric_record(metrics: pd.DataFrame | None, model: str, title: str, descrip
         "holdoutAuc": value(holdout, "auc"),
         "walkForwardBrier": value(walk, "brier"),
         "holdoutBrier": value(holdout, "brier"),
-        "mcc": value(walk, "mcc") or value(holdout, "mcc"),
-        "ciLower": value(walk, "auc_ci_lower_95") or value(walk, "auc_lower_95"),
-        "ciUpper": value(walk, "auc_ci_upper_95") or value(walk, "auc_upper_95"),
-        "events": value(walk, "n") or value(holdout, "n"),
-        "positiveRate": value(walk, "positive_rate") or value(holdout, "positive_rate"),
+        "mcc": first_value(walk, "mcc") if first_value(walk, "mcc") is not None else value(holdout, "mcc"),
+        "ciLower": first_value(walk, "auc_ci_lower_95", "auc_lower_95") if first_value(walk, "auc_ci_lower_95", "auc_lower_95") is not None else first_value(holdout, "auc_ci_lower_95", "auc_lower_95"),
+        "ciUpper": first_value(walk, "auc_ci_upper_95", "auc_upper_95") if first_value(walk, "auc_ci_upper_95", "auc_upper_95") is not None else first_value(holdout, "auc_ci_upper_95", "auc_upper_95"),
+        "events": value(walk, "n") if value(walk, "n") is not None else value(holdout, "n"),
+        "positiveRate": value(walk, "positive_rate") if value(walk, "positive_rate") is not None else value(holdout, "positive_rate"),
+        "walkForward": walk_group,
+        "holdout": holdout_group,
+        "evaluationYears": manifest.get("walk_forward_years", []),
+        "holdoutCutoffYear": manifest.get("holdout_cutoff_year"),
+        "companyCount": manifest.get("companies"),
+        "splitMethodology": walk_group.get("splitRule") or holdout_group.get("splitRule"),
+        "confidenceInterval": walk_ci,
     }
 
 
@@ -263,6 +329,7 @@ def main() -> None:
         ("sentence_plus_historical_xgboost_depth1_trees100", "Rich XGBoost", "Language, sentence-position, and historical context features.", "Richer candidate"),
         ("original_logistic", "Original Logistic", "Smaller sentiment model used as the reference.", "Reference"),
         ("market_only_logistic", "Market-only baseline", "Recent market behavior without transcript language.", "Context baseline"),
+        ("historical_xgboost_depth1_trees200", "Historical XGBoost", "Stored comparison using historical language features without the sentence-position extension.", "Additional comparison"),
     ]
     model_records = []
     for key, title, description, badge in model_config:
@@ -270,8 +337,10 @@ def main() -> None:
 
     selected = next((bundle for bundle in bundles if bundle.predictions is not None), bundles[0])
     output = {
-        "version": 1,
+        "version": 2,
         "generatedAt": pd.Timestamp.now(tz="UTC").isoformat(),
+        "baseRateDefinition": "Dataset-level positive-outcome rate for the active artifact; it is not a rolling company sentiment average.",
+        "confidenceDefinition": "Signal strength is the absolute distance between model probability and the active artifact’s dataset-level positive-outcome rate: Low <5 points, Medium 5–15 points, High ≥15 points.",
         "defaultModel": _model_key(selected),
         "models": [
             {"key": _model_key(bundle), "label": bundle.display_label, "displayName": bundle.display_name, "experimental": bundle.is_experimental, "baseRate": _base_rate(bundle), "events": len(bundle.feature_table), "companies": int(bundle.feature_table["symbol"].nunique())}
