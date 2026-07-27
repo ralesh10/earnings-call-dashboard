@@ -723,7 +723,7 @@ function updateSortUI() {
 }
 
 window.switchTab = switchTab;
-window.setFilter = (type, value, button) => { setFilter(type, value, button); };
+window.setFilter = setFilter;
 window.onModelChange = onModelChange;
 window.loadDetail = loadDetail;
 
