@@ -1,0 +1,17 @@
+{
+  "artifact_version": "1.0",
+  "model_version": "original-baseline-v1",
+  "display_name": "Original Sentiment Logistic Regression",
+  "model_family": "logistic_regression",
+  "prediction_source": "model_inference",
+  "target_column": "abnormal_return_5d",
+  "target_display": "Direction of five-session abnormal return",
+  "prediction_threshold": 0.5,
+  "training_cutoff_year": 2023,
+  "evaluation_period": "2023+ exploratory holdout",
+  "sample_size": 300,
+  "baseline_accuracy": 0.5133,
+  "accuracy": 0.5567,
+  "auc": 0.6272,
+  "notes": "Legacy exploratory baseline migrated into the validated dashboard contract. Historical outcome columns remain in the table for backtest context and are excluded from model features."
+}

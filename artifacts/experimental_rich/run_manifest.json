@@ -1,0 +1,32 @@
+{
+  "artifact_version": "1.0",
+  "model_version": "experimental-sentence-historical-xgb-v1",
+  "display_name": "Sentence + Historical Surprise XGBoost",
+  "model_family": "xgboost",
+  "status": "experimental",
+  "prediction_source": "stored_out_of_sample_prediction_or_model_inference",
+  "feature_block": "sentence_plus_historical",
+  "target_column": "abnormal_return_5d",
+  "target_display": "Direction of five-session abnormal return",
+  "prediction_threshold": 0.5,
+  "sample_size": 886,
+  "companies": 61,
+  "hyperparameters": {
+    "max_depth": 1,
+    "n_estimators": 100,
+    "learning_rate": 0.03,
+    "min_child_weight": 10,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "random_state": 42
+  },
+  "walk_forward_years": [2019, 2020, 2021, 2022],
+  "holdout_cutoff_year": 2023,
+  "selection_rule": "Highest mean 2019-2022 walk-forward AUC; log loss tie-breaker; 2023+ holdout excluded",
+  "mean_walk_forward_auc": 0.628498,
+  "pooled_walk_forward_auc": 0.631410,
+  "exploratory_holdout_auc": 0.626842,
+  "auc_ci_lower_95": 0.569076,
+  "auc_ci_upper_95": 0.687729,
+  "notes": "Experimental richer-feature candidate. It is displayed alongside the original baseline for comparison and is not a confirmed replacement. Historical surprise features are sentiment-relative measures, not EPS surprises."
+}

@@ -1,0 +1,22 @@
+{
+  "artifact_version": "1.0",
+  "model_version": "original-baseline-v1",
+  "display_name": "Original Sentiment Logistic Regression",
+  "model_family": "logistic_regression",
+  "feature_columns": [
+    "pres_pos",
+    "pres_neg",
+    "pres_neu",
+    "qa_pos",
+    "qa_neg",
+    "qa_neu",
+    "sentiment_mismatch_pos",
+    "sentiment_mismatch_neg",
+    "evasion_index",
+    "pres_net_sentiment",
+    "qa_net_sentiment"
+  ],
+  "target_column": "abnormal_return_5d",
+  "target_display": "Direction of five-session abnormal return",
+  "prediction_threshold": 0.5
+}
