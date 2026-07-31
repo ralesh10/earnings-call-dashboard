@@ -1,6 +1,6 @@
 # Earnings Call Intelligence frontend
 
-This directory is the mockup-native static frontend. It intentionally does not use Streamlit widgets: `index.html` preserves the finalized visual system and `app.js` supplies the interactions.
+This directory contains the static frontend: `index.html` defines the visual system and `app.js` supplies the interactions.
 
 ## Refresh real artifact data
 
