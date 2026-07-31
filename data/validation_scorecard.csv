@@ -1,0 +1,8 @@
+dimension,score_1_to_5,status,reason
+Pipeline execution,3.0,yellow,The notebook now has explicit price-data scope and non-Colab-safe artifact handling; external APIs and delisted symbols remain dependencies.
+Target validity,2.0,red,"The sign target is usable for an event study, but timestamp semantics and benchmark/return construction require confirmation."
+Leakage control,2.0,red,The historical sector selection is not point-in-time and the 2023+ holdout was already inspected during experimentation.
+Feature quality,2.0,yellow,"FinBERT features are available before the target, but probabilities and derived sentiment features are structurally redundant and coarse."
+Statistical evidence,3.0,yellow,The audit reports clustered intervals and permutation results; a single historical holdout cannot establish generalization.
+Economic usefulness,1.0,red,No cost-adjusted portfolio evidence is established until the event timing and out-of-sample ranking results are confirmed.
+Overall project state,2.17,exploratory,"Promising research question and a weak preliminary signal, but not yet a validated trading model."
