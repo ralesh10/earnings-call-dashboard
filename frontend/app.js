@@ -36,6 +36,17 @@ function formatMetric(value) {
   return value === null || value === undefined ? '—' : Number(value).toFixed(3);
 }
 
+function signalStrengthExplanation(model) {
+  if (!model || model.prob === null || model.prob === undefined) return 'Signal strength is unavailable because no probability was produced.';
+  const level = String(model.confidence || model.signalStrength || 'Unavailable').toLowerCase();
+  const difference = Number(model.differenceFromBaseRate);
+  if (!Number.isFinite(difference) || model.baseRate === null || model.baseRate === undefined) {
+    return `${level} signal strength: distance from the active model’s dataset-level positive-outcome rate. This measures deviation from the baseline, not certainty.`;
+  }
+  const relation = difference >= 0 ? 'above' : 'below';
+  return `${level} signal strength: the model probability is ${formatPoints(Math.abs(difference))} ${relation} the active model’s dataset-level positive-outcome rate (${formatPercent(model.baseRate)}). This measures deviation from the baseline, not certainty.`;
+}
+
 function defaultFiltersFor(modelKey) {
   return {
     dir: 'ALL',
@@ -93,7 +104,7 @@ function directionLabel(model) {
 function confidenceBadge(model) {
   if (!model || !model.confidence || model.confidence === 'UNAVAILABLE') return '<span class="badge muted">Unavailable</span>';
   const level = String(model.confidence).toLowerCase();
-  return `<span class="badge confidence-${escapeHtml(level)}" title="${escapeHtml(model.signalStrengthDescription || model.confidenceDescription || 'Signal strength is measured against the active model base rate.')}">${escapeHtml(level)} signal strength</span>`;
+  return `<span class="badge confidence-${escapeHtml(level)}" title="${escapeHtml(signalStrengthExplanation(model))}">${escapeHtml(level)} signal strength</span>`;
 }
 
 function signalBadge(model) {
@@ -102,7 +113,7 @@ function signalBadge(model) {
   const label = model.tone === 'positive' ? '▲ Positive prediction' : '▼ Negative prediction';
   const baseRelation = model.baseRateRelation || (Number(model.prob) >= Number(model.baseRate) ? 'Above base rate' : 'Below base rate');
   const threshold = model.predictionThreshold === null || model.predictionThreshold === undefined ? 'Unavailable' : formatPercent(model.predictionThreshold);
-  const context = `Model probability ${formatPercent(model.prob)}; binary decision threshold ${threshold}; ${baseRelation}; typical positive-outcome rate ${formatPercent(model.baseRate)}; difference ${formatPoints(model.differenceFromBaseRate, true)}. ${model.signalStrengthDescription || model.confidenceDescription || model.explanation}`;
+  const context = `Model probability ${formatPercent(model.prob)}; binary decision threshold ${threshold}; ${baseRelation}; dataset-level positive-outcome rate ${formatPercent(model.baseRate)}; difference ${formatPoints(model.differenceFromBaseRate, true)}. ${signalStrengthExplanation(model)}`;
   return `<span class="badge ${className}" title="${escapeHtml(context)}">${label} · ${formatPercent(model.prob)}</span>`;
 }
 
@@ -430,11 +441,11 @@ function renderDetailView() {
     probText.innerText = 'N/A';
     probText.style.color = 'var(--muted)';
     dirText.innerText = 'Unavailable';
-    $('gaugeContext').innerText = 'Threshold: unavailable · Typical rate: unavailable · Difference: unavailable';
+    $('gaugeContext').innerText = 'Decision threshold: unavailable · Dataset rate: unavailable · Offset: unavailable';
     confBadge.className = 'badge muted';
     confBadge.innerText = 'UNAVAILABLE';
     confBadge.title = 'Signal strength is unavailable because no probability was produced.';
-    $('gaugeConfidenceNote').innerText = 'Signal strength compares the model probability with the active model’s typical positive-outcome rate.';
+    $('gaugeConfidenceNote').innerText = 'Signal strength compares the model probability with the active model’s dataset-level positive-outcome rate.';
   } else {
     const isPositive = model.tone === 'positive';
     const color = isPositive ? 'var(--up)' : model.tone === 'negative' ? 'var(--down)' : 'var(--neutral)';
@@ -444,12 +455,12 @@ function renderDetailView() {
     probText.style.color = color;
     dirText.innerText = directionLabel(model);
     const threshold = model.predictionThreshold === null || model.predictionThreshold === undefined ? 'Unavailable' : formatPercent(model.predictionThreshold);
-    $('gaugeContext').innerText = `Threshold: ${threshold} · Typical rate: ${formatPercent(model.baseRate)} · Difference: ${formatPoints(model.differenceFromBaseRate, true)}`;
-    $('gaugeContext').title = model.baseRateDefinition || 'Typical rate is the dataset-level positive-outcome rate for the active artifact, not a rolling company sentiment average.';
+    $('gaugeContext').innerText = `Decision threshold: ${threshold} · Dataset rate: ${formatPercent(model.baseRate)} · Offset: ${formatPoints(model.differenceFromBaseRate, true)}`;
+    $('gaugeContext').title = model.baseRateDefinition || 'Dataset rate is the active model’s dataset-level positive-outcome rate, not a company-specific historical rating.';
     confBadge.className = `badge confidence-${String(model.confidence || 'unavailable').toLowerCase()}`;
     confBadge.innerText = `${model.confidence || 'UNAVAILABLE'} SIGNAL STRENGTH`;
-    confBadge.title = model.signalStrengthDescription || model.confidenceDescription || 'Signal strength compares distance from the active model’s base rate.';
-    $('gaugeConfidenceNote').innerText = model.signalStrengthDescription || model.confidenceDescription || 'Signal strength compares the model probability with the active model’s typical positive-outcome rate.';
+    confBadge.title = signalStrengthExplanation(model);
+    $('gaugeConfidenceNote').innerText = signalStrengthExplanation(model);
   }
   $('featureContainer').innerHTML = renderFeatureBars(model);
   drawEventWindowChart(call);

@@ -389,8 +389,8 @@ def _signal(probability: float | None, center: float, threshold: float | None = 
         return "Unavailable", "neutral", "This call does not have a usable model score."
     decision_threshold = center if threshold is None else threshold
     if probability >= decision_threshold:
-        return "Positive", "positive", "The model probability is above its binary decision threshold; signal strength reflects its distance from the typical positive-outcome rate."
-    return "Negative", "negative", "The model probability is below its binary decision threshold; signal strength reflects its distance from the typical positive-outcome rate."
+        return "Positive", "positive", "The model probability is at or above its binary decision threshold; signal strength separately reflects its distance from the active artifact’s dataset-level positive-outcome rate."
+    return "Negative", "negative", "The model probability is below its binary decision threshold; signal strength separately reflects its distance from the active artifact’s dataset-level positive-outcome rate."
 
 
 def _conviction(probability: float | None, center: float) -> str:

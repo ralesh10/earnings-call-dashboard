@@ -162,11 +162,11 @@ def _prediction_for(bundle: Any, row: pd.Series) -> dict[str, Any]:
     actual = _number(row.get(target))
     difference = None if probability is None else probability - center
     confidence_description = (
-        "Low signal strength: the model is within 5 percentage points of the typical positive-outcome rate."
+        "Low signal strength: the model is within 5 percentage points of the active artifact’s dataset-level positive-outcome rate. This measures deviation from the baseline, not certainty."
         if difference is not None and abs(difference) < .05 else
-        "Medium signal strength: the model is 5–15 percentage points from the typical positive-outcome rate."
+        "Medium signal strength: the model is 5–15 percentage points from the active artifact’s dataset-level positive-outcome rate. This measures deviation from the baseline, not certainty."
         if difference is not None and abs(difference) < .15 else
-        "High signal strength: the model is at least 15 percentage points from the typical positive-outcome rate."
+        "High signal strength: the model is at least 15 percentage points from the active artifact’s dataset-level positive-outcome rate. This measures deviation from the baseline, not certainty."
         if difference is not None else
         "Signal strength is unavailable because no probability was produced."
     )
@@ -189,7 +189,7 @@ def _prediction_for(bundle: Any, row: pd.Series) -> dict[str, Any]:
         "confidence": _conviction(probability, center).upper(),
         "signalStrength": _conviction(probability, center).upper(),
         "baseRate": center,
-        "baseRateDefinition": "Dataset-level positive-outcome rate for the active artifact; it is not a rolling company sentiment average.",
+        "baseRateDefinition": "Dataset-level positive-outcome rate for the active artifact; it is not a company-specific historical rating or rolling sentiment average.",
         "differenceFromBaseRate": difference,
         "confidenceDescription": confidence_description,
         "signalStrengthDescription": confidence_description,
@@ -339,8 +339,8 @@ def main() -> None:
     output = {
         "version": 2,
         "generatedAt": pd.Timestamp.now(tz="UTC").isoformat(),
-        "baseRateDefinition": "Dataset-level positive-outcome rate for the active artifact; it is not a rolling company sentiment average.",
-        "confidenceDefinition": "Signal strength is the absolute distance between model probability and the active artifact’s dataset-level positive-outcome rate: Low <5 points, Medium 5–15 points, High ≥15 points.",
+        "baseRateDefinition": "Dataset-level positive-outcome rate for the active artifact; it is not a company-specific historical rating or rolling sentiment average.",
+        "confidenceDefinition": "Signal strength is the absolute distance between model probability and the active artifact’s dataset-level positive-outcome rate: Low <5 points, Medium 5–15 points, High ≥15 points. It measures deviation from the baseline, not certainty.",
         "defaultModel": _model_key(selected),
         "models": [
             {"key": _model_key(bundle), "label": bundle.display_label, "displayName": bundle.display_name, "experimental": bundle.is_experimental, "baseRate": _base_rate(bundle), "events": len(bundle.feature_table), "companies": int(bundle.feature_table["symbol"].nunique())}

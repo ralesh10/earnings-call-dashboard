@@ -157,6 +157,21 @@ Failed to create stream fd: Operation not permitted
     border: 5px solid transparent; border-top-color: var(--border-focus);
   }
 
+  .disclaimer-banner {
+    display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; padding: 10px 12px;
+    background: rgba(245, 176, 65, 0.09); border: 1px solid rgba(245, 176, 65, 0.35);
+    border-radius: 6px; color: var(--muted); font-size: 12px; line-height: 1.45;
+  }
+  .disclaimer-banner strong { color: var(--gold); font-family: var(--font-mono); text-transform: uppercase; font-size: 11px; }
+  .disclaimer-mark { color: var(--gold); font-family: var(--font-mono); font-weight: 700; }
+
+  .signal-key {
+    display: grid; gap: 7px; margin-top: 14px; padding: 10px 12px;
+    background: var(--surface-raised); border: 1px solid var(--border-soft); border-radius: 6px;
+    color: var(--muted); font-size: 11.5px; line-height: 1.4; text-align: left;
+  }
+  .signal-key strong { color: var(--text); }
+
   /* Typography & Headers */
   h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; color: var(--text); }
   .eyebrow { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 6px; }
@@ -240,6 +255,7 @@ Failed to create stream fd: Operation not permitted
   .search-input:focus { border-color: var(--gold); }
 
   .data-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .screener-table-wrap { overflow: visible; position: relative; z-index: 2; }
   .data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12.5px; }
   .data-table th {
     background: var(--surface-raised); padding: 10px 14px; font-family: var(--font-mono);
@@ -403,6 +419,10 @@ Failed to create stream fd: Operation not permitted
           <p style="color: var(--muted); font-size: 13.5px; margin-bottom: 20px;">
             This system evaluates corporate earnings presentation scripts and unscripted analyst Q&amp;A sessions. By contrasting real-time executive sentiment, evasiveness, and semantic entropy against a company's historical baseline, the active ML model projects whether 5-day cumulative abnormal returns (CAR) will beat or lag the market.
           </p>
+          <div class="disclaimer-banner" role="note" aria-label="Financial disclaimer">
+            <span class="disclaimer-mark">!</span>
+            <div><strong>Research tool — not financial advice.</strong><br>Predictions are model outputs for research and education, not recommendations to buy, sell, or trade any security.</div>
+          </div>
           <div style="display:flex; gap: 10px;">
             <button class="btn btn-gold" onclick="switchTab('screener')">Launch Screener ➔</button>
             <button class="btn" onclick="switchTab('reliability')">Compare Architecture Lineage</button>
@@ -543,7 +563,7 @@ Failed to create stream fd: Operation not permitted
       <span id="screenerActiveModelLabel">Model: Loading…</span>
     </div>
 
-    <div class="data-table-wrap">
+    <div class="data-table-wrap screener-table-wrap">
       <table class="data-table" id="screenerTable">
         <thead>
           <tr>
@@ -551,7 +571,7 @@ Failed to create stream fd: Operation not permitted
             <th><button type="button" class="sort-button" data-sort-key="datetime" data-label="Earnings Quarter" aria-sort="descending">Earnings Quarter ↓</button></th>
             <th><button type="button" class="sort-button" data-sort-key="status" data-label="Dataset Status" aria-sort="none">Dataset Status ↕</button></th>
             <th><button type="button" class="sort-button" data-sort-key="probability" data-label="Active Model Signal" aria-sort="none">Active Model Signal ↕</button></th>
-            <th><button type="button" class="sort-button" data-sort-key="strength" data-label="Signal Strength" aria-sort="none">Signal Strength ↕</button> <span class="infoicon">i<span class="tip">Signal strength is measured by distance from the typical positive-outcome rate, not by distance from the 50% decision threshold.</span></span></th>
+            <th><button type="button" class="sort-button" data-sort-key="strength" data-label="Signal Strength" aria-sort="none">Signal Strength ↕</button> <span class="infoicon">i<span class="tip">Signal strength is measured by distance from the active model’s dataset-level positive-outcome rate, not by distance from the 50% decision threshold. It measures deviation from the baseline, not certainty.</span></span></th>
             <th><button type="button" class="sort-button" data-sort-key="actualReturn" data-label="Actual 5D Return" aria-sort="none">Actual 5D Return ↕</button></th>
             <th>Action</th>
           </tr>
@@ -592,18 +612,22 @@ Failed to create stream fd: Operation not permitted
       <!-- Left Column: Key Gauges & Actuals -->
       <div class="detail-left">
         <div class="card gauge-card">
-          <div class="eyebrow">Active Model Direction Signal</div>
+          <div class="eyebrow">Active Model Probability</div>
           <div class="gauge-wrap">
             <div class="gauge-bg"></div>
             <div class="gauge-fill" id="gaugeFill"></div>
           </div>
           <div class="gauge-val" id="gaugeProbText">68%</div>
           <div class="gauge-sub" id="gaugeDirText">Positive or negative prediction</div>
-          <div id="gaugeContext" style="font-size:11px;color:var(--muted-dim);font-family:var(--font-mono);margin-top:8px;">Threshold: — · Typical rate: — · Difference: —</div>
+          <div id="gaugeContext" style="font-size:11px;color:var(--muted-dim);font-family:var(--font-mono);margin-top:8px;">Decision threshold: — · Dataset rate: — · Offset: —</div>
           <div style="margin-top: 14px;">
-            <span class="badge" id="gaugeConfBadge">HIGH CONFIDENCE</span>
+            <span class="badge" id="gaugeConfBadge">HIGH SIGNAL STRENGTH</span>
           </div>
-          <div id="gaugeConfidenceNote" style="font-size:11px;color:var(--muted);line-height:1.45;margin-top:8px;">Signal strength compares the model probability with the active model’s typical positive-outcome rate.</div>
+          <div id="gaugeConfidenceNote" style="font-size:11px;color:var(--muted);line-height:1.45;margin-top:8px;">Signal strength compares the model probability with the active model’s dataset-level positive-outcome rate.</div>
+          <div class="signal-key">
+            <div><strong>Direction:</strong> the large percentage is the model’s estimated probability of a positive five-session abnormal return—company performance above SPY. At or above the decision threshold, the prediction is positive; below it, the prediction is negative.</div>
+            <div><strong>Strength:</strong> Low, Medium, or High measures distance from the dataset rate shown above—not distance from 50% and not certainty.</div>
+          </div>
         </div>
 
         <div class="card" style="padding: 16px;">
