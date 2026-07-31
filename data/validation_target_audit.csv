@@ -1,0 +1,10 @@
+check,value,interpretation
+Rows after target construction,883,Rows without a 5-session target are removed by the labeling function.
+Unique companies,61,Company-level clustering is required for uncertainty intervals.
+Fiscal/event-year mismatches,221,"The chronological split uses event_year from the actual call timestamp, not the dataset's reporting/fiscal year field."
+Retained call phases,"{'pre_open': 728, 'after_close': 155}",The corrected target keeps pre-open and after-close calls; intraday calls should be absent because daily prices cannot isolate them.
+Intraday calls retained,0,Expected value is zero after the corrected event-time filter.
+Duplicate symbol/date rows,0,Duplicates can overweight a single event.
+Positive target rate,0.5164212910532276,The majority-class baseline must be reported alongside accuracy.
+Calls at/after 16:00,0.1755379388448471,Daily prices cannot isolate an intraday call precisely; confirm timestamp timezone and publication time.
+Feature columns containing target-like names,none,Name-based screen only; it does not replace point-in-time review.

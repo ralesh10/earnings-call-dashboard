@@ -1,0 +1,19 @@
+{
+  "experiment": "controlled same-sample model comparison",
+  "input": "focused_feature_artifacts.zip (source path intentionally omitted)",
+  "rows": 886,
+  "companies": 61,
+  "positive_count": 458,
+  "negative_count": 428,
+  "walk_forward_years": [
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "holdout_cutoff_year": 2023,
+  "threshold": 0.5,
+  "random_state": 42,
+  "bootstrap_repetitions": 2000,
+  "note": "Original baseline is retrained from the original notebook's unscaled LogisticRegression(max_iter=1000) specification because no serialized legacy model is present in this repository."
+}
