@@ -22,4 +22,6 @@ Then open `http://127.0.0.1:4173/`.
 
 ## Deploy to Vercel
 
-Create a Vercel project with this directory as the project root. It is a static site: use no build command and serve the project root as the output. Re-run the exporter whenever the artifact files change, commit the updated JSON, and redeploy.
+Configure the Vercel project with the repository root as its project root and frontend/ as its output directory. The root-level Python /api/chat Function is deployed alongside the static site. Re-run the exporter whenever the artifact files change, commit the updated JSON, and redeploy.
+
+The repository also contains a Python /api/chat function for the optional research assistant. When deploying the combined dashboard, set the Vercel project root to the repository root and configure frontend/ as the static output directory. The function requires the server-side OPENAI_API_KEY; the browser only calls the relative /api/chat endpoint.

@@ -367,6 +367,70 @@ Failed to create stream fd: Operation not permitted
   .btn-gold { background: var(--gold); color: #000; border-color: var(--gold); }
   .btn-gold:hover { background: #e09e30; }
 
+  /* Grounded research assistant */
+  .rag-chat-widget {
+    position: fixed; right: 24px; bottom: 24px; z-index: 80;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+    pointer-events: none;
+  }
+  .rag-chat-launcher, .rag-chat-panel { pointer-events: auto; }
+  .rag-chat-launcher {
+    display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--gold-dim);
+    border-radius: 999px; padding: 11px 15px; background: var(--gold); color: #07090e;
+    box-shadow: 0 10px 28px rgba(0,0,0,.4); cursor: pointer; font-size: 12px; font-weight: 700;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .rag-chat-launcher:hover { background: #ffc45b; transform: translateY(-1px); box-shadow: 0 12px 32px rgba(0,0,0,.48); }
+  .rag-chat-launcher:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+  .rag-chat-launcher-icon { font-size: 15px; line-height: 1; }
+  .rag-chat-panel {
+    width: min(390px, calc(100vw - 32px)); height: min(560px, calc(100vh - 108px)); min-height: 360px;
+    display: flex; flex-direction: column; overflow: hidden; background: var(--surface);
+    border: 1px solid var(--border-focus); border-radius: 12px; box-shadow: 0 18px 55px rgba(0,0,0,.58);
+  }
+  .rag-chat-panel[hidden] { display: none; }
+  .rag-chat-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 13px 15px; background: var(--surface-raised); border-bottom: 1px solid var(--border);
+  }
+  .rag-chat-title { color: var(--text); font-family: var(--font-display); font-size: 14px; font-weight: 700; }
+  .rag-chat-subtitle { color: var(--muted); font: 10px var(--font-mono); margin-top: 2px; }
+  .rag-chat-minimize {
+    width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 18px; line-height: 1;
+  }
+  .rag-chat-minimize:hover { color: var(--text); border-color: var(--gold); }
+  .rag-chat-messages {
+    flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 14px;
+    background: radial-gradient(circle at 100% 0, rgba(245,176,65,.06), transparent 35%);
+  }
+  .rag-chat-message { max-width: 92%; border-radius: 9px; padding: 9px 11px; font-size: 12px; line-height: 1.5; }
+  .rag-chat-message p { margin: 0; white-space: normal; overflow-wrap: anywhere; }
+  .rag-chat-message-user { align-self: flex-end; background: var(--gold-soft); border: 1px solid rgba(245,176,65,.28); color: var(--text); }
+  .rag-chat-message-assistant { align-self: flex-start; background: var(--surface-raised); border: 1px solid var(--border); color: var(--muted); }
+  .rag-chat-message-error { border-color: rgba(255,77,109,.35); color: #ff9aac; }
+  .rag-chat-sources { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--border); color: var(--muted-dim); font: 10px/1.45 var(--font-mono); }
+  .rag-chat-sources strong { color: var(--gold); font-weight: 600; }
+  .rag-chat-loading { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+  .rag-chat-loading::before { content: ''; width: 7px; height: 7px; border: 2px solid var(--border-focus); border-top-color: var(--gold); border-radius: 50%; animation: rag-chat-spin .7s linear infinite; }
+  @keyframes rag-chat-spin { to { transform: rotate(360deg); } }
+  .rag-chat-form { padding: 11px; background: var(--surface-raised); border-top: 1px solid var(--border); }
+  .rag-chat-input {
+    width: 100%; min-height: 62px; resize: vertical; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 7px; padding: 9px 10px; font: 12px/1.45 var(--font-body);
+  }
+  .rag-chat-input::placeholder { color: var(--muted-dim); }
+  .rag-chat-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-soft); }
+  .rag-chat-form-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+  .rag-chat-status { color: var(--muted-dim); font: 10px var(--font-mono); }
+  .rag-chat-submit { padding: 7px 12px; font-size: 11px; }
+  .rag-chat-submit:disabled, .rag-chat-input:disabled { cursor: wait; opacity: .65; }
+  @media (max-width: 760px) {
+    .rag-chat-widget { right: 12px; bottom: 12px; }
+    .rag-chat-panel { width: calc(100vw - 24px); height: min(570px, calc(100vh - 92px)); }
+  }
+
   @media (max-width: 1024px) {
     .grid-2, .grid-3, .grid-4, .detail-grid, .status-grid, .pipeline-flow { grid-template-columns: 1fr; }
     .hero-stats { grid-template-columns: 1fr 1fr; }
@@ -750,10 +814,39 @@ Failed to create stream fd: Operation not permitted
 
 </main>
 
+<!-- ==================== GROUNDED RESEARCH ASSISTANT ==================== -->
+<div class="rag-chat-widget" id="ragChatWidget">
+  <section class="rag-chat-panel" id="ragChatPanel" aria-labelledby="ragChatTitle" hidden>
+    <header class="rag-chat-header">
+      <div>
+        <div class="rag-chat-title" id="ragChatTitle">Research assistant</div>
+        <div class="rag-chat-subtitle">Grounded in project docs &amp; stored metrics</div>
+      </div>
+      <button class="rag-chat-minimize" id="ragChatMinimize" type="button" aria-label="Minimize research assistant">−</button>
+    </header>
+    <div class="rag-chat-messages" id="ragChatMessages" role="log" aria-live="polite">
+      <div class="rag-chat-message rag-chat-message-assistant">
+        <p>Ask about the research record, validation methodology, or stored model metrics. I will only answer from the project sources.</p>
+      </div>
+    </div>
+    <form class="rag-chat-form" id="ragChatForm">
+      <textarea class="rag-chat-input" id="ragChatInput" maxlength="2000" rows="2" placeholder="e.g. What does the holdout AUC measure?" aria-label="Research assistant question"></textarea>
+      <div class="rag-chat-form-row">
+        <span class="rag-chat-status" id="ragChatStatus">Research context only · not financial advice</span>
+        <button class="btn btn-gold rag-chat-submit" id="ragChatSubmit" type="submit">Ask</button>
+      </div>
+    </form>
+  </section>
+  <button class="rag-chat-launcher" id="ragChatLauncher" type="button" aria-expanded="false" aria-controls="ragChatPanel">
+    <span class="rag-chat-launcher-icon" aria-hidden="true">✦</span>
+    <span>Ask research assistant</span>
+  </button>
+</div>
+
 <footer style="max-width:1400px;margin:0 auto;padding:0 24px 24px;color:var(--muted-dim);font:10px var(--font-mono);text-align:right;">
   <span id="dataBuildInfo">Artifact export: loading…</span>
 </footer>
 
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

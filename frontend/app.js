@@ -7,6 +7,7 @@ const state = {
   sort: { key: 'datetime', direction: 'desc' },
   page: 1,
   pageSize: 20,
+  ragChat: { pending: false },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -689,6 +690,114 @@ function bindSortControls() {
   });
 }
 
+function appendRagMessage(role, text, sources = [], options = {}) {
+  const messages = $('ragChatMessages');
+  if (!messages) return null;
+  const message = document.createElement('div');
+  const roleClass = role === 'user' ? 'rag-chat-message-user' : 'rag-chat-message-assistant';
+  const errorClass = options.error ? ' rag-chat-message-error' : '';
+  message.className = `rag-chat-message ${roleClass}${errorClass}`;
+  const paragraph = document.createElement('p');
+  paragraph.innerHTML = escapeHtml(text).replaceAll('\n', '<br>');
+  message.appendChild(paragraph);
+
+  if (sources.length) {
+    const sourceNote = document.createElement('div');
+    sourceNote.className = 'rag-chat-sources';
+    sourceNote.innerHTML = `<strong>Sources:</strong> ${sources.map((source) => escapeHtml(source)).join('; ')}`;
+    message.appendChild(sourceNote);
+  }
+
+  messages.appendChild(message);
+  messages.scrollTop = messages.scrollHeight;
+  return message;
+}
+
+function setRagChatOpen(open) {
+  const panel = $('ragChatPanel');
+  const launcher = $('ragChatLauncher');
+  if (!panel || !launcher) return;
+  panel.hidden = !open;
+  launcher.setAttribute('aria-expanded', String(open));
+  if (open) $('ragChatInput')?.focus();
+}
+
+function setRagChatBusy(busy) {
+  state.ragChat.pending = busy;
+  const input = $('ragChatInput');
+  const submit = $('ragChatSubmit');
+  const status = $('ragChatStatus');
+  if (input) input.disabled = busy;
+  if (submit) {
+    submit.disabled = busy;
+    submit.innerText = busy ? 'Thinking…' : 'Ask';
+  }
+  if (status && busy) status.innerText = 'Searching project sources…';
+  if (status && !busy) status.innerText = 'Research context only · not financial advice';
+}
+
+async function submitRagQuestion(event) {
+  event.preventDefault();
+  if (state.ragChat.pending) return;
+  const input = $('ragChatInput');
+  const question = input?.value.trim() || '';
+  if (!question) {
+    appendRagMessage('assistant', 'Please enter a question about the project research record.', [], { error: true });
+    input?.focus();
+    return;
+  }
+
+  appendRagMessage('user', question);
+  input.value = '';
+  const loadingMessage = appendRagMessage('assistant', 'Searching the research record…');
+  loadingMessage?.classList.add('rag-chat-loading');
+  setRagChatBusy(true);
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `Assistant request failed (${response.status}).`);
+    loadingMessage?.remove();
+    appendRagMessage('assistant', payload.answer || 'The assistant returned an empty answer.', payload.sources || []);
+  } catch (error) {
+    loadingMessage?.remove();
+    appendRagMessage('assistant', error.message || 'The research assistant is temporarily unavailable.', [], { error: true });
+  } finally {
+    setRagChatBusy(false);
+    input?.focus();
+  }
+}
+
+function bindRagChat() {
+  const launcher = $('ragChatLauncher');
+  const minimize = $('ragChatMinimize');
+  const form = $('ragChatForm');
+  if (!launcher || !minimize || !form || form.dataset.bound === 'true') return;
+  form.dataset.bound = 'true';
+  launcher.addEventListener('click', () => {
+    const isOpen = launcher.getAttribute('aria-expanded') === 'true';
+    setRagChatOpen(!isOpen);
+  });
+  minimize.addEventListener('click', () => setRagChatOpen(false));
+  form.addEventListener('submit', submitRagQuestion);
+  $('ragChatInput')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && launcher.getAttribute('aria-expanded') === 'true') {
+      setRagChatOpen(false);
+      launcher.focus();
+    }
+  });
+}
+
 async function boot() {
   try {
     const response = await fetch('data/app-data.json', { cache: 'no-store' });
@@ -702,6 +811,7 @@ async function boot() {
     bindSearch();
     bindFilters();
     bindSortControls();
+    bindRagChat();
     updateModelStatus();
     buildTickerTape();
     updateFilterUI();
@@ -742,4 +852,7 @@ window.loadDetail = loadDetail;
 // without responding to input.
 bindFilters();
 bindSortControls();
-document.addEventListener('DOMContentLoaded', boot);
+document.addEventListener('DOMContentLoaded', () => {
+  bindRagChat();
+  boot();
+});

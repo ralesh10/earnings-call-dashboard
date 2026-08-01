@@ -48,10 +48,32 @@ The exporter reads the validated bundles under `artifacts/` and writes `frontend
 
 ## Deploy
 
-Use `frontend/` as the Vercel project root. This is a static site, so no build command or runtime API keys are required. Serve the project root as the output directory.
+Use the repository root as the Vercel project root and frontend/ as the output directory. The Python /api/chat Function is discovered from the root-level api/ directory.
 
 Optional historical price windows can be generated offline with `scripts/enrich_price_windows.py` using Alpaca credentials. Credentials stay local; the browser only receives the exported chart data.
 
 ## Data and evaluation notes
 
 The dashboard uses time-aware validation: earlier years are used to evaluate later years, and a later holdout is reported separately. Predictions, confidence labels, feature values, and reliability metrics come from the checked-in artifacts. Missing transcript evidence, feature groups, or price history is shown as unavailable rather than filled with placeholder data.
+
+## Research assistant
+
+The static dashboard includes a bottom-right research assistant. It sends each question to the same-project POST /api/chat serverless function; the browser never receives the OpenAI API key. Answers are grounded only in the curated project record:
+
+- README.md, RESEARCH_README.md, and RESEARCH_SUMMARY.md
+- data/validation_summary.csv and data/validation_scorecard.csv
+- the stored comparison and experimental model metric CSVs under data/artifacts/ and artifacts/
+
+The assistant returns the supporting filenames with each answer and states when the project sources do not contain enough information. It is a documentation aid for research and education, not investment advice.
+
+### Run the assistant locally
+
+The Vercel Function uses the minimal dependencies in requirements.txt. For the Streamlit dashboard and model tooling, install requirements-dashboard.txt. Set OPENAI_API_KEY in the environment, then run the frontend/API through a Vercel-compatible development server. The frontend calls /api/chat relative to its origin:
+
+~~~bash
+python -m pip install -r requirements.txt
+export OPENAI_API_KEY="your-key"
+vercel dev
+~~~
+
+For deployment, configure the Vercel project root as this repository and use frontend/ as the output directory. Add OPENAI_API_KEY as a server-side Vercel environment variable. Do not put the key in frontend/, app.js, or any browser-exposed file.
